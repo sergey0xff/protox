@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+message User {
+    required uint32 id = 1;
+    required string first_name = 2;
+    required string last_name = 3;
+    required string phone_number = 4;
+    required uint32 age = 5;
+
+    reserved 100, 200, 300 to max;
+    reserved "hello";
+}

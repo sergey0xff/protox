@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+message User {
+    enum Type {
+        MERE_MORTAL = 1;
+        ADMIN = 2;
+    }
+
+    required uint32 id = 1;
+    required string name = 2;
+    required Type type = 3 [default = MERE_MORTAL];
+}

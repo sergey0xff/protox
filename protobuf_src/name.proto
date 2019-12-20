@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package one.two.three;
+
+message Hello {
+}
+
+service Hello {
+    rpc ping (Hello) returns (Hello);
+}

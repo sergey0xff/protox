@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message RepeatedA {
+    enum A {
+        X = -2147483648;
+        Y = 2;
+    }
+    repeated A list = 1 [packed = false];
+}

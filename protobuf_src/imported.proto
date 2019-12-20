@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message ImportedMessage {
+    required int32 x = 1;
+
+    message Nested {
+        required int32 x = 1;
+    }
+}

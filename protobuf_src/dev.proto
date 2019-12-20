@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+import "imported.proto";
+
+message Hello {
+}
+
+
