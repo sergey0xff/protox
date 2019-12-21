@@ -9,4 +9,9 @@ message User {
     required uint32 id = 1;
     required string name = 2;
     required Type type = 3 [default = MERE_MORTAL];
+
+    oneof result {
+        int32 ok = 10;
+        int32 fail = 11;
+    }
 }

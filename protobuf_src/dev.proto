@@ -1,8 +1,8 @@
-syntax = "proto2";
-
-import "imported.proto";
+syntax = "proto3";
 
 message Hello {
+    int32 async = 1;
+    int32 getattr = 2;
 }
 
 
