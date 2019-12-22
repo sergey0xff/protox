@@ -2,6 +2,7 @@ syntax = "proto2";
 
 message User {
     enum Type {
+        UNDEFINED = 0;
         MERE_MORTAL = 1;
         ADMIN = 2;
     }
@@ -9,6 +10,7 @@ message User {
     required uint32 id = 1;
     required string name = 2;
     required Type type = 3 [default = MERE_MORTAL];
+    map<string, Type> props = 4;
 
     oneof result {
         int32 ok = 10;
