@@ -25,9 +25,9 @@ class User(protox.Message):
     def __init__(
         self,
         *,
-        id: int,
-        name: str,
-        type: 'User.Type',
+        id: int = None,
+        name: str = None,
+        type: 'User.Type' = None,
         props: typing.Dict[str, 'User.Type'] = None,
         ok: typing.Optional[int] = None,
         fail: typing.Optional[int] = None,

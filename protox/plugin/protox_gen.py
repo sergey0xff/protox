@@ -465,14 +465,7 @@ class CodeGenerator:
                     self.resolve_field_type(field)
                 )
 
-                default_value = ''
-
-                if is_optional(field):
-                    default_value = ' = None'
-                elif is_repeated(field):
-                    default_value = ' = None'
-
-                w(f'{field.name}: {py_type}{default_value},')
+                w(f'{field.name}: {py_type} = None,')
 
         w('):')
 
