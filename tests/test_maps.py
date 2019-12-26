@@ -1,6 +1,8 @@
+from enum import IntEnum
 from typing import Dict
 
 import pytest
+import typing
 
 from protox import Message, fields, MapField
 
@@ -77,3 +79,26 @@ class TestMapFields:
                 value=fields.String,
                 number=1
             )
+
+    def test_enum_values(self):
+        class MyMessage(Message):
+            class Color(IntEnum):
+                RED = 1
+                GREEN = 2
+                BLUE = 3
+
+            map: typing.Dict[str, Color] = fields.MapField(
+                key=fields.String,
+                value=Color,
+                number=1
+            )
+
+        message = MyMessage()
+        assert message.map == {}
+        message.map['color'] = MyMessage.Color.BLUE
+        assert message.map == {'color': MyMessage.Color.BLUE}
+
+        new_message = MyMessage.from_bytes(message.to_bytes())
+        assert new_message.map == {'color': MyMessage.Color.BLUE}
+
+

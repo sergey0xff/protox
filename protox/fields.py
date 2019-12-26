@@ -2,7 +2,7 @@ import enum
 import io
 import struct
 from abc import ABC, abstractmethod
-from typing import IO, Type, Optional, List, Dict, Tuple, Iterable, BinaryIO
+from typing import IO, Type, Optional, List, Dict, Tuple, Iterable, BinaryIO, Union
 
 from protox.constants import (
     MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, MIN_UINT32,
@@ -607,7 +607,7 @@ class MapField(Field):
     def __init__(
         self,
         key: Type[Field],
-        value: Type[Field],
+        value: Union[Type[Field], Type[enum.IntEnum]],
         *,
         number: int
     ):
@@ -618,10 +618,14 @@ class MapField(Field):
 
         super().__init__(number=number)
 
-        from protox import Message
-
         key_field = key(number=1, required=True)
-        value_field = value(number=2, required=True)
+
+        if issubclass(value, enum.IntEnum):
+            value_field = EnumField(number=2, required=True, py_enum=value)
+        else:
+            value_field = value(number=2, required=True)
+
+        from protox import Message
 
         class _DictEntry(Message):
             key = key_field
