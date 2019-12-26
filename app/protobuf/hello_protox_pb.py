@@ -54,7 +54,7 @@ protox.define_fields(
         number=3, py_enum=User.Type, default=User.Type.MERE_MORTAL, required=True
     ),
     props=protox.MapField(
-        number=4, key=protox.String, value=protox.EnumField
+        number=4, key=protox.String, value=User.Type
     ),
     ok=protox.Int32(
         number=10, required=False
