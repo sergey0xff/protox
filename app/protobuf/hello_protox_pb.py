@@ -4,7 +4,6 @@ import protox
 class MyMessage(protox.Message):
     empty: protox.Empty
 
-
     def __init__(
         self,
         *,

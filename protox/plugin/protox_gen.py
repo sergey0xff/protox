@@ -270,6 +270,10 @@ def is_group_field(field: FieldDescriptor) -> bool:
     return field.type == FieldDescriptor.TYPE_GROUP
 
 
+def is_well_known_type_field(field):
+    return field.type_name.startswith('.google.protobuf')
+
+
 class CodeGenerator:
     def __init__(self, proto_file, index: Index):
         self._proto_file = proto_file
@@ -308,18 +312,16 @@ class CodeGenerator:
                 .replace('/', '__')
         )
 
-    def resolve_google_protobuf_import(self, field):
+    @staticmethod
+    def resolve_google_protobuf_import(field):
         type_name = field.type_name.split(".")[-1]
         return f'protox.{type_name}'
-
-    def is_google_protobuf_type(self, field):
-        return field.type_name.startswith('.google.protobuf')
 
     def resolve_import(self, field):
         """
         Requests import of the file in which the imported message is
         """
-        if self.is_google_protobuf_type(field):
+        if is_well_known_type_field(field):
             return self.resolve_google_protobuf_import(field)
 
         field_type = field.type_name
@@ -455,8 +457,8 @@ class CodeGenerator:
 
             nl()
 
-            self.write_oneofs(message)
-            nl()
+            if self.write_oneofs(message):
+                nl()
 
             self.write_init(message)
 
@@ -490,7 +492,9 @@ class CodeGenerator:
 
     def write_oneofs(self, message):
         w = self._buffer.write
-        for name, fields in collect_one_of(message).items():
+        one_ofs = collect_one_of(message).items()
+
+        for name, fields in one_ofs:
             w(f'{name} = protox.one_of(')
 
             with self._buffer.indent():
@@ -498,6 +502,8 @@ class CodeGenerator:
                     w(f"'{field}',")
 
             w(')')
+
+        return bool(one_ofs)
 
     def write_enum(self, enum_type):
         self._uses_enums = True
@@ -612,11 +618,15 @@ class CodeGenerator:
         # enums
         for enum_type in self._proto_file.enum_type:
             self.write_enum(enum_type)
+
+        if self._proto_file.enum_type:
             nl(2)
 
         # messages
         for message_type in self._proto_file.message_type:
             self.write_message(message_type)
+
+        if self._proto_file.message_type:
             nl(2)
 
         # message fields
