@@ -2,7 +2,7 @@ from protox import Message, Int32
 from protox.message import define_fields
 
 
-def test_add_fields_to_message():
+def test_define_fields():
     class User(Message):
         id: int
 
