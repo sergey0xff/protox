@@ -238,7 +238,7 @@ class Message(metaclass=MessageMeta):
         for key, value in kwargs.items():
             if key not in self._field_by_name:
                 raise AttributeError(
-                    f'Protocol message {type(self).__name__} has no {key!r} field'
+                    f'Protocol message {type(self).__qualname__} has no {key!r} field'
                 )
             if value is not None:
                 setattr(self, key, value)
@@ -246,7 +246,7 @@ class Message(metaclass=MessageMeta):
     def to_python(self):
         if self._to_python is None:
             raise NotImplementedError(
-                f'to_python function is not provided for message {type(self).__name__}'
+                f'to_python() function is not provided for protocol message {type(self).__qualname__}'
             )
 
         return self._to_python()
@@ -255,7 +255,7 @@ class Message(metaclass=MessageMeta):
     def from_python(cls: Type[T], value) -> T:
         if cls._from_python is None:
             raise NotImplementedError(
-                f'from_python function is not provided for message {cls.__name__}'
+                f'from_python() function is not provided for protocol message {cls.__qualname__}'
             )
         return cls._from_python(value)
 
@@ -365,7 +365,7 @@ class Message(metaclass=MessageMeta):
         """
         if name not in self._field_by_name:
             raise AttributeError(
-                f"Protocol message {type(self).__name__} has no such field {name!r}"
+                f"Protocol message {type(self).__qualname__} has no such field {name!r}"
             )
 
         return super().__getattribute__(name) is not None
@@ -373,7 +373,7 @@ class Message(metaclass=MessageMeta):
     def which_one_of(self, one_of_name: str) -> Optional[str]:
         if one_of_name not in self._one_ofs:
             raise ValueError(
-                f'Protocol message {type(self).__name__} has no one_of {one_of_name!r}'
+                f'Protocol message {type(self).__qualname__} has no one_of {one_of_name!r}'
             )
 
         try:
