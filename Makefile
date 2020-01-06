@@ -11,5 +11,5 @@ protox:
 		--proto_path=protobuf_src \
 		--plugin=protoc-gen-protox=./protox/plugin/protox_gen.py\
 		--protox_out=. \
-		--protox_opt=base_package=app/protobuf\
+		--protox_opt=--base-package-dir=app/protobuf\
 		./protobuf_src/hello_protox.proto

@@ -3,5 +3,5 @@ syntax = "proto2";
 import "google/protobuf/empty.proto";
 
 message MyMessage {
-    required google.protobuf.Empty empty = 1;
+    required google.protobuf.Empty protox = 1;
 }
