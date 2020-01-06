@@ -1,7 +1,7 @@
-from typing import Iterable
+from typing import Iterable, List
 
 
-class ValidatedList(list):
+class ValidatedList(List):
     def __init__(self, field, iterable=tuple()):
         self._field = field
         super().__init__(iterable)
