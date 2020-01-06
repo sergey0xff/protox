@@ -396,8 +396,11 @@ class Message(metaclass=MessageMeta):
         if isinstance(value, Message):
             return value.to_dict()
 
-        if isinstance(value, List) or isinstance(value, Tuple):
+        if isinstance(value, List):
             return [self._to_dict(x) for x in value]
+
+        if isinstance(value, Dict):
+            return dict(value)
 
         return value
 

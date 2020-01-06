@@ -22,3 +22,4 @@ message = MyMessage()
 print(message.map)
 
 message.map['xx'] = MyMessage.Color.BLUE
+print(message.to_dict()['map'])
