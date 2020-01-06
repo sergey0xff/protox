@@ -53,7 +53,7 @@ class WireType(enum.IntEnum):
 class Field(ABC):
     wire_type: WireType  # should be provided by subclasses
 
-    def __init__(self, *, number: int, default=None, required: bool = True):
+    def __init__(self, *, number: int, default=None, required: bool = False):
         self._validate_field_number(number)
 
         self._number = number
@@ -223,7 +223,7 @@ class Repeated(Field):
 
         self.wire_type = self._strategy.wire_type
 
-        super().__init__(number=number, required=False)
+        super().__init__(number=number)
 
     @property
     def field(self):
@@ -407,7 +407,7 @@ class EnumField(Field):
         *,
         number,
         default=None,
-        required=True,
+        required=False,
     ):
         self._validate_py_enum(py_enum)
 
@@ -607,7 +607,7 @@ class MapField(Field):
     def __init__(
         self,
         key: Type[Field],
-        value: Union[Type[Field], Type[enum.IntEnum]],
+        value: Union[Type[Field], Type[enum.IntEnum], Type['Message']],
         *,
         number: int
     ):
@@ -620,12 +620,14 @@ class MapField(Field):
 
         key_field = key(number=1, required=True)
 
-        if issubclass(value, enum.IntEnum):
+        from protox import Message
+
+        if issubclass(value, Message):
+            value_field = value.as_field(number=2, required=True)
+        elif issubclass(value, enum.IntEnum):
             value_field = EnumField(number=2, required=True, py_enum=value)
         else:
             value_field = value(number=2, required=True)
-
-        from protox import Message
 
         class _DictEntry(Message):
             key = key_field
@@ -680,7 +682,7 @@ class MessageField(Field):
         *,
         number,
         default=None,
-        required=True,
+        required=False,
     ):
         super().__init__(
             number=number,

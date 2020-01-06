@@ -135,12 +135,12 @@ def _add_field_to_message(
 
 
 def define_fields(
-    message_type: Type['Message'],
+    message_type_: Type['Message'],
     **kwargs,
 ):
     for name, field in kwargs.items():
         _add_field_to_message(
-            message_type,
+            message_type_,
             name,
             field,
         )
@@ -267,7 +267,7 @@ class Message(metaclass=MessageMeta):
         cls._from_python = fn
 
     @classmethod
-    def as_field(cls, *, number: int, required: bool = True) -> MessageField:
+    def as_field(cls, *, number: int, required: bool = False) -> MessageField:
         return MessageField(
             cls,
             number=number,

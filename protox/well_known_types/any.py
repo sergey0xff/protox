@@ -2,8 +2,8 @@ from protox import Message, fields
 
 
 class Any(Message):
-    type_url: str = fields.String(number=1, required=False)
-    value: bytes = fields.Bytes(number=2, required=False)
+    type_url: str = fields.String(number=1)
+    value: bytes = fields.Bytes(number=2)
 
     def __init__(
         self,

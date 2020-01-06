@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import sys
 from contextlib import contextmanager
-from typing import List, Dict
+from types import SimpleNamespace
+from typing import List, Dict, Set
 
 from google.protobuf.compiler import plugin_pb2
 from google.protobuf.descriptor import FieldDescriptor
@@ -139,6 +140,13 @@ def pb_to_protox_type(pb_type):
         fd.TYPE_BOOL: 'Bool',
         fd.TYPE_ENUM: 'EnumField',
     }[pb_type]
+
+
+def pythonize_default_value(default_value):
+    return {
+        'true': 'True',
+        'false': 'False',
+    }.get(default_value, default_value)
 
 
 def debug(*args):
@@ -291,7 +299,7 @@ class CodeGenerator:
         """
         return (
             py_type == '' or
-            self._index.proto_files[py_type] == self._proto_file
+            self._index.proto_files.get(py_type) == self._proto_file
         )
 
     @staticmethod
@@ -327,9 +335,12 @@ class CodeGenerator:
         field_type = field.type_name
 
         if is_enum_field(field):
-            field_type = '.'.join(field_type.split('.')[:-1])
+            enum_field_type = '.'.join(field_type.split('.')[:-1])
 
-        file = self._index.proto_files[field_type]
+        try:
+            file = self._index.proto_files[enum_field_type]
+        except KeyError:
+            file = self._index.proto_files[field_type]
 
         package = self.package_name(file)
         self._import_requests[file.name] = file
@@ -545,7 +556,7 @@ class CodeGenerator:
 
         nl()
 
-    def write_add_fields_to_message(self, message):
+    def write_define_fields(self, message, path=''):
         w = self._buffer.write
 
         if not message.field:
@@ -554,7 +565,7 @@ class CodeGenerator:
         w('protox.define_fields(')
 
         with self._buffer.indent():
-            w(f'{message.name},')
+            w(f'{path}{message.name},')
             for field in message.field:
                 field_kwargs = {
                     'number': field.number
@@ -568,7 +579,8 @@ class CodeGenerator:
                     field_kwargs['key'] = key_type
                     field_kwargs['value'] = value_type
                 elif is_message_field(field):
-                    field_type = f'{self.resolve_field_type(field)}.as_field'
+                    field_type = self.resolve_field_type(field).strip("'")
+                    field_type = f'{field_type}.as_field'
                 elif is_enum_field(field):
                     field_type = 'protox.EnumField'
                     py_enum = self.resolve_field_type(field).strip("'")
@@ -584,7 +596,7 @@ class CodeGenerator:
                     field_type = f'protox.{pb_to_protox_type(field.type)}'
 
                     if field.default_value:
-                        field_kwargs['default'] = field.default_value
+                        field_kwargs['default'] = pythonize_default_value(field.default_value)
 
                 if self.is_map_field(field):
                     pass
@@ -592,6 +604,7 @@ class CodeGenerator:
                     if field.options.packed:
                         field_kwargs['packed'] = True
 
+                    field_type = field_type.replace('.as_field', '')
                     field_type = f'{field_type}.as_repeated'
                 elif is_optional(field):
                     field_kwargs['required'] = 'False'
@@ -612,26 +625,25 @@ class CodeGenerator:
 
         w(')\n')
 
+        for nested_type in message.nested_type:
+            self.write_define_fields(nested_type, path=message.name + '.')
+
     def generate(self) -> plugin_pb2.CodeGeneratorResponse.File:
         nl = self._buffer.nl
 
         # enums
         for enum_type in self._proto_file.enum_type:
             self.write_enum(enum_type)
-
-        if self._proto_file.enum_type:
             nl(2)
 
         # messages
         for message_type in self._proto_file.message_type:
             self.write_message(message_type)
-
-        if self._proto_file.message_type:
             nl(2)
 
         # message fields
         for message_type in self._proto_file.message_type:
-            self.write_add_fields_to_message(message_type)
+            self.write_define_fields(message_type)
 
         self.write_imports()
         imports = self._import_buffer.read()
@@ -654,27 +666,50 @@ class CodeGenerator:
         )
 
 
-def main():
-    # data = b'\n\x12hello_protox.proto\x12\x19base_package=app/protobuf\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\xb8\x12\n\x1bgoogle/protobuf/empty.proto\x12\x0fgoogle.protobuf"\x07\n\x05EmptyBv\n\x13com.google.protobufB\nEmptyProtoP\x01Z\'github.com/golang/protobuf/ptypes/empty\xf8\x01\x01\xa2\x02\x03GPB\xaa\x02\x1eGoogle.Protobuf.WellKnownTypesJ\xfe\x10\n\x06\x12\x04\x1e\x003\x10\n\xcc\x0c\n\x01\x0c\x12\x03\x1e\x00\x122\xc1\x0c Protocol Buffers - Google\'s data interchange format\n Copyright 2008 Google Inc.  All rights reserved.\n https://developers.google.com/protocol-buffers/\n\n Redistribution and use in source and binary forms, with or without\n modification, are permitted provided that the following conditions are\n met:\n\n     * Redistributions of source code must retain the above copyright\n notice, this list of conditions and the following disclaimer.\n     * Redistributions in binary form must reproduce the above\n copyright notice, this list of conditions and the following disclaimer\n in the documentation and/or other materials provided with the\n distribution.\n     * Neither the name of Google Inc. nor the names of its\n contributors may be used to endorse or promote products derived from\n this software without specific prior written permission.\n\n THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\n LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\n A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT\n OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,\n SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\n LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\n THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n\x08\n\x01\x02\x12\x03 \x08\x17\n\x08\n\x01\x08\x12\x03"\x00;\n\t\n\x02\x08%\x12\x03"\x00;\n\x08\n\x01\x08\x12\x03#\x00>\n\t\n\x02\x08\x0b\x12\x03#\x00>\n\x08\n\x01\x08\x12\x03$\x00,\n\t\n\x02\x08\x01\x12\x03$\x00,\n\x08\n\x01\x08\x12\x03%\x00+\n\t\n\x02\x08\x08\x12\x03%\x00+\n\x08\n\x01\x08\x12\x03&\x00"\n\t\n\x02\x08\n\x12\x03&\x00"\n\x08\n\x01\x08\x12\x03\'\x00!\n\t\n\x02\x08$\x12\x03\'\x00!\n\x08\n\x01\x08\x12\x03(\x00\x1f\n\t\n\x02\x08\x1f\x12\x03(\x00\x1f\n\xfb\x02\n\x02\x04\x00\x12\x033\x00\x10\x1a\xef\x02 A generic empty message that you can re-use to avoid defining duplicated\n empty messages in your APIs. A typical example is to use it as the request\n or the response type of an API method. For instance:\n\n     service Foo {\n       rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n     }\n\n The JSON representation for `Empty` is empty JSON object `{}`.\n\n\n\n\x03\x04\x00\x01\x12\x033\x08\rb\x06proto3z\xe8\x01\n\x12hello_protox.proto\x1a\x1bgoogle/protobuf/empty.proto"9\n\tMyMessage\x12,\n\x05empty\x18\x01 \x02(\x0b2\x16.google.protobuf.EmptyR\x05emptyJz\n\x06\x12\x04\x00\x00\x06\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\t\n\x02\x03\x00\x12\x03\x02\x07$\n\n\n\x02\x04\x00\x12\x04\x04\x00\x06\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x11\n\x0b\n\x04\x04\x00\x02\x00\x12\x03\x05\x04-\n\x0c\n\x05\x04\x00\x02\x00\x04\x12\x03\x05\x04\x0c\n\x0c\n\x05\x04\x00\x02\x00\x06\x12\x03\x05\r"\n\x0c\n\x05\x04\x00\x02\x00\x01\x12\x03\x05#(\n\x0c\n\x05\x04\x00\x02\x00\x03\x12\x03\x05+,'
+def parse_args():
+    """
+    TODO: Implement argument parser here
+    """
+    return SimpleNamespace(
+        with_dependencies=True,
+        to_snake_case=True,
+    )
 
-    data = sys.stdin.buffer.read()
+
+def main():
+    data = b'\n\x0bhello.proto\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\xfd\x01\n\x0bother.proto\x12\rother.package*%\n\x05Color\x12\x07\n\x03RED\x10\x00\x12\t\n\x05GREEN\x10\x01\x12\x08\n\x04BLUE\x10\x02J\xaf\x01\n\x06\x12\x04\x00\x00\x08\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x15\n\n\n\x02\x05\x00\x12\x04\x04\x00\x08\x01\n\n\n\x03\x05\x00\x01\x12\x03\x04\x05\n\n\x0b\n\x04\x05\x00\x02\x00\x12\x03\x05\x04\x0c\n\x0c\n\x05\x05\x00\x02\x00\x01\x12\x03\x05\x04\x07\n\x0c\n\x05\x05\x00\x02\x00\x02\x12\x03\x05\n\x0b\n\x0b\n\x04\x05\x00\x02\x01\x12\x03\x06\x04\x0e\n\x0c\n\x05\x05\x00\x02\x01\x01\x12\x03\x06\x04\t\n\x0c\n\x05\x05\x00\x02\x01\x02\x12\x03\x06\x0c\r\n\x0b\n\x04\x05\x00\x02\x02\x12\x03\x07\x04\r\n\x0c\n\x05\x05\x00\x02\x02\x01\x12\x03\x07\x04\x08\n\x0c\n\x05\x05\x00\x02\x02\x02\x12\x03\x07\x0b\x0cb\x06proto3z\xd8\x01\n\x0bhello.proto\x1a\x0bother.proto"7\n\tMyMessage\x12*\n\x05color\x18\x01 \x01(\x0e2\x14.other.package.ColorR\x05colorJ{\n\x06\x12\x04\x00\x00\x06\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\t\n\x02\x03\x00\x12\x03\x02\x07\x14\n\n\n\x02\x04\x00\x12\x04\x04\x00\x06\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x11\n\x0b\n\x04\x04\x00\x02\x00\x12\x03\x05\x04"\n\r\n\x05\x04\x00\x02\x00\x04\x12\x04\x05\x04\x04\x13\n\x0c\n\x05\x04\x00\x02\x00\x06\x12\x03\x05\x04\x17\n\x0c\n\x05\x04\x00\x02\x00\x01\x12\x03\x05\x18\x1d\n\x0c\n\x05\x04\x00\x02\x00\x03\x12\x03\x05 !b\x06proto3'
+    # data = sys.stdin.buffer.read()
     # debug(data)
     # return
 
     # Parse request
     request = plugin_pb2.CodeGeneratorRequest()
     request.ParseFromString(data)
+
     index = Index(request)
 
+    # args
+    args = parse_args()
+
     # Create response
-    files_to_generate = set(request.file_to_generate)
+    files_to_generate: Set[str] = set(request.file_to_generate)
+
+    # filter out google/protobuf files
+    files = [
+        x for x in request.proto_file
+        if not x.name.startswith('google/protobuf/')
+    ]
+
+    if not args.with_dependencies:
+        files = [
+            x for x in request.proto_file
+            if x.name in files_to_generate
+        ]
 
     response = plugin_pb2.CodeGeneratorResponse(
         file=[
-            CodeGenerator(proto_file, index).generate()
-            for proto_file in request.proto_file
-            # TODO: refactor the following line
-            if proto_file.name in files_to_generate and not proto_file.name.startswith('google/protobuf/')
+            CodeGenerator(file, index).generate()
+            for file in files
         ]
     )
 
