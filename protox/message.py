@@ -135,12 +135,13 @@ def _add_field_to_message(
 
 
 def define_fields(
-    message_type_: Type['Message'],
+    # using this mangled name to avoid field name conflict
+    __message_type__: Type['Message'],
     **kwargs,
 ):
     for name, field in kwargs.items():
         _add_field_to_message(
-            message_type_,
+            __message_type__,
             name,
             field,
         )
