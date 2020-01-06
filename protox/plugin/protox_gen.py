@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+import re
 import shlex
 import sys
+from collections import Counter
 from contextlib import contextmanager
 from typing import List, Dict, Set
 
 from google.protobuf.compiler import plugin_pb2
 from google.protobuf.descriptor import FieldDescriptor
 
-reserved_keywords = [
+reserved_names = [
     'False',
     'None',
     'True',
@@ -61,10 +63,15 @@ protobuf_file_postfix = '_pb'
 
 
 def pythonize_name(name: str) -> str:
-    if name in reserved_keywords:
+    if name in reserved_names:
         return name + '_'
 
     return name
+
+
+def to_snake_case(name):
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def is_empty_message(message):
@@ -281,16 +288,72 @@ def is_well_known_type_field(field):
     return field.type_name.startswith('.google.protobuf')
 
 
+class FieldMangler:
+    def __init__(self, message, snake_case: bool):
+        # original field names
+        self._message_fields = set(
+            x.name for x in message.field
+        )
+        self._name_counter = Counter()
+        self._snake_case = snake_case
+
+        # maps original field names to mangled ones
+        self._mangled_names: Dict[str, str] = {}
+
+        for name in self._message_fields:
+            self._process_name(name)
+
+    def _mangle_name(self, name):
+        self._name_counter[name] += 1
+
+        while f'{name}_{self._name_counter[name]}' in self._message_fields:
+            self._name_counter[name] += 1
+
+        return f'{name}_{self._name_counter[name]}'
+
+    def _process_name(self, name):
+        if self._snake_case:
+            py_name = to_snake_case(name)
+        else:
+            py_name = name
+
+        if (
+            py_name in reserved_names
+            or
+            py_name != name and py_name in self._message_fields
+        ):
+            py_name = self._mangle_name(py_name)
+
+        self._mangled_names[name] = py_name
+
+    def get(self, field: str):
+        if field not in self._message_fields:
+            raise ValueError('No such name')
+
+        return self._mangled_names[field]
+
+
 class CodeGenerator:
-    def __init__(self, proto_file, index: Index):
+    def __init__(self, proto_file, index: Index, args):
         self._proto_file = proto_file
         self._index = index
+        self._args = args
         self._indent = 0
         self._uses_enums = False
         self._uses_typing = False
         self._import_requests = {}
         self._buffer = StringBuffer()
         self._import_buffer = StringBuffer()
+        self._field_manglers = {}
+
+    def resolve_field_name(self, message, field: str):
+        if message.name not in self._field_manglers:
+            self._field_manglers[message.name] = FieldMangler(
+                message,
+                self._args.snake_case
+            )
+
+        return self._field_manglers[message.name].get(field)
 
     def is_local_type(self, py_type: str):
         """
@@ -465,7 +528,7 @@ class CodeGenerator:
                     field,
                     self.resolve_field_type(field)
                 )
-                w(f'{field.name}: {py_type}')
+                w(f'{self.resolve_field_name(message, field.name)}: {py_type}')
 
             nl()
 
@@ -489,7 +552,7 @@ class CodeGenerator:
                     self.resolve_field_type(field)
                 )
 
-                w(f'{field.name}: {py_type} = None,')
+                w(f'{self.resolve_field_name(message, field.name)}: {py_type} = None,')
 
         w('):')
 
@@ -498,7 +561,8 @@ class CodeGenerator:
 
             with indent():
                 for field in message.field:
-                    w(f'{field.name}={field.name},')
+                    field_name = self.resolve_field_name(message, field.name)
+                    w(f'{field_name}={field_name},')
 
             w(')')
 
@@ -612,7 +676,7 @@ class CodeGenerator:
                 else:
                     field_kwargs['required'] = 'True'
 
-                w(f'{field.name}={field_type}(')
+                w(f'{self.resolve_field_name(message, field.name)}={field_type}(')
 
                 with self._buffer.indent():
                     w(', '.join(
@@ -684,14 +748,14 @@ def create_arg_parser() -> argparse.ArgumentParser:
         help='If enabled all imported .proto files are also generated',
     )
     parser.add_argument(
-        '--grpclib',
-        action='store_true',
-        help='If enabled grpclib services are generated'
-    )
-    parser.add_argument(
         '--snake-case',
         action='store_true',
         help='If enabled message fields, enum variants and grpc methods are renamed to snake_case'
+    )
+    parser.add_argument(
+        '--grpclib',
+        action='store_true',
+        help='If enabled grpclib services are generated'
     )
 
     return parser
@@ -714,7 +778,10 @@ def main():
     )
 
     # build index
-    index = Index(request, args.base_package_dir)
+    index = Index(
+        request,
+        args.base_package_dir
+    )
 
     # Create response
     files_to_generate: Set[str] = set(request.file_to_generate)
@@ -733,7 +800,7 @@ def main():
 
     response = plugin_pb2.CodeGeneratorResponse(
         file=[
-            CodeGenerator(file, index).generate()
+            CodeGenerator(file, index, args).generate()
             for file in files
         ]
     )
