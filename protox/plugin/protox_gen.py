@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import argparse
+import shlex
 import sys
 from contextlib import contextmanager
-from types import SimpleNamespace
 from typing import List, Dict, Set
 
 from google.protobuf.compiler import plugin_pb2
@@ -49,10 +50,10 @@ reserved_keywords = [
     'int',
     'float',
     'bool',
-    'enum',
     'str',
     'bytes',
     'typing',
+    'enum',
     'IntEnum',
 ]
 
@@ -173,20 +174,18 @@ def parse_base_package(parameter: str) -> str:
 
 
 class Index:
-    def __init__(self, request: plugin_pb2.CodeGeneratorRequest):
+    def __init__(
+        self,
+        request: plugin_pb2.CodeGeneratorRequest,
+        base_package: str,
+    ):
         self.request = request
-        self.base_package = parse_base_package(request.parameter).rstrip('/')
+        self.base_package = base_package
         # messages by full names
         self.messages: dict = {}
         # protobuf file descriptors by full names
         self.proto_files: dict = {}
         self._build()
-
-    def same_file(self, type_a: str, type_b: str) -> bool:
-        """
-        Checks whether two types defined in the same file
-        """
-        pass
 
     def _build(self):
         for proto_file in self.request.proto_file:
@@ -336,6 +335,8 @@ class CodeGenerator:
 
         if is_enum_field(field):
             enum_field_type = '.'.join(field_type.split('.')[:-1])
+        else:
+            enum_field_type = None
 
         try:
             file = self._index.proto_files[enum_field_type]
@@ -666,14 +667,34 @@ class CodeGenerator:
         )
 
 
-def parse_args():
-    """
-    TODO: Implement argument parser here
-    """
-    return SimpleNamespace(
-        with_dependencies=True,
-        to_snake_case=True,
+def create_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description='Protox cli'
     )
+
+    parser.add_argument(
+        '--base-package-dir',
+        default='',
+        type=str,
+        help='Base python package directory relative to root directory. E.g. app/protobuf, .'
+    )
+    parser.add_argument(
+        '--gen-deps',
+        action='store_true',
+        help='If enabled all imported .proto files are also generated',
+    )
+    parser.add_argument(
+        '--grpclib',
+        action='store_true',
+        help='If enabled grpclib services are generated'
+    )
+    parser.add_argument(
+        '--snake-case',
+        action='store_true',
+        help='If enabled message fields, enum variants and grpc methods are renamed to snake_case'
+    )
+
+    return parser
 
 
 def main():
@@ -686,10 +707,14 @@ def main():
     request = plugin_pb2.CodeGeneratorRequest()
     request.ParseFromString(data)
 
-    index = Index(request)
-
     # args
-    args = parse_args()
+    arg_parser = create_arg_parser()
+    args = arg_parser.parse_args(
+        shlex.split(request.parameter)
+    )
+
+    # build index
+    index = Index(request, args.base_package_dir)
 
     # Create response
     files_to_generate: Set[str] = set(request.file_to_generate)
@@ -700,7 +725,7 @@ def main():
         if not x.name.startswith('google/protobuf/')
     ]
 
-    if not args.with_dependencies:
+    if not args.gen_deps:
         files = [
             x for x in request.proto_file
             if x.name in files_to_generate
