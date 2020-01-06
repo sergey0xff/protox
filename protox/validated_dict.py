@@ -1,9 +1,9 @@
-from typing import Optional
+from typing import Optional, Dict
 
 from protox.fields import MapField
 
 
-class ValidatedDict(dict):
+class ValidatedDict(Dict):
     def __init__(
         self,
         map_field: MapField,
