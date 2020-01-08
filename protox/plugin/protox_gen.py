@@ -5,10 +5,10 @@ import shlex
 import sys
 from collections import Counter
 from contextlib import contextmanager
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
 
-from google.protobuf.compiler import plugin_pb2
-from google.protobuf.descriptor import FieldDescriptor
+from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto
+from protox.well_known_types.plugin import CodeGeneratorRequest, CodeGeneratorResponse
 
 reserved_names = [
     'False',
@@ -69,12 +69,12 @@ def pythonize_name(name: str) -> str:
     return name
 
 
-def to_snake_case(name):
+def to_snake_case(name: str) -> str:
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-def is_empty_message(message):
+def is_empty_message(message: DescriptorProto) -> bool:
     return (
         not message.nested_type and
         not message.field and
@@ -82,7 +82,7 @@ def is_empty_message(message):
     )
 
 
-def collect_one_of(message) -> Dict[str, List[str]]:
+def collect_one_of(message: DescriptorProto) -> Dict[str, List[str]]:
     one_ofs = {}
     one_of_by_index = []
 
@@ -92,14 +92,14 @@ def collect_one_of(message) -> Dict[str, List[str]]:
         one_of_by_index.append(lst)
 
     for field in message.field:
-        if field.HasField('oneof_index'):
+        if field.has_field('oneof_index'):
             one_of_by_index[field.oneof_index].append(field.name)
 
     return one_ofs
 
 
-def pb_to_py_type(pb_type):
-    fd = FieldDescriptor
+def pb_to_py_type(pb_type: FieldDescriptorProto.Type) -> str:
+    fd = FieldDescriptorProto.Type
 
     return {
         fd.TYPE_DOUBLE: 'float',
@@ -124,8 +124,8 @@ def pb_to_py_type(pb_type):
     }[pb_type]
 
 
-def pb_to_protox_type(pb_type):
-    fd = FieldDescriptor
+def pb_to_protox_type(pb_type: FieldDescriptorProto.Type) -> str:
+    fd = FieldDescriptorProto.Type
 
     return {
         fd.TYPE_DOUBLE: 'Double',
@@ -150,7 +150,7 @@ def pb_to_protox_type(pb_type):
     }[pb_type]
 
 
-def pythonize_default_value(default_value):
+def pythonize_default_value(default_value: str) -> str:
     return {
         'true': 'True',
         'false': 'False',
@@ -183,7 +183,7 @@ def parse_base_package(parameter: str) -> str:
 class Index:
     def __init__(
         self,
-        request: plugin_pb2.CodeGeneratorRequest,
+        request: CodeGeneratorRequest,
         base_package: str,
     ):
         self.request = request
@@ -260,42 +260,42 @@ class StringBuffer:
         return ''.join(self._buffer)
 
 
-def is_optional(field: FieldDescriptor) -> bool:
-    return field.label == FieldDescriptor.LABEL_OPTIONAL
+def is_optional(field: FieldDescriptorProto) -> bool:
+    return field.label == FieldDescriptorProto.Label.LABEL_OPTIONAL
 
 
-def is_required(field: FieldDescriptor) -> bool:
-    return field.label == FieldDescriptor.LABEL_REQUIRED
+def is_required(field: FieldDescriptorProto) -> bool:
+    return field.label == FieldDescriptorProto.Label.LABEL_REQUIRED
 
 
-def is_repeated(field: FieldDescriptor) -> bool:
-    return field.label == FieldDescriptor.LABEL_REPEATED
+def is_repeated(field: FieldDescriptorProto) -> bool:
+    return field.label == FieldDescriptorProto.Label.LABEL_REPEATED
 
 
-def is_message_field(field: FieldDescriptor) -> bool:
-    return field.type == FieldDescriptor.TYPE_MESSAGE
+def is_message_field(field: FieldDescriptorProto) -> bool:
+    return field.type == FieldDescriptorProto.Type.TYPE_MESSAGE
 
 
-def is_enum_field(field: FieldDescriptor) -> bool:
-    return field.type == FieldDescriptor.TYPE_ENUM
+def is_enum_field(field: FieldDescriptorProto) -> bool:
+    return field.type == FieldDescriptorProto.Type.TYPE_ENUM
 
 
-def is_group_field(field: FieldDescriptor) -> bool:
-    return field.type == FieldDescriptor.TYPE_GROUP
+def is_group_field(field: FieldDescriptorProto) -> bool:
+    return field.type == FieldDescriptorProto.Type.TYPE_GROUP
 
 
-def is_well_known_type_field(field):
+def is_well_known_type_field(field: FieldDescriptorProto) -> bool:
     return field.type_name.startswith('.google.protobuf')
 
 
 class FieldMangler:
-    def __init__(self, message, snake_case: bool):
+    def __init__(self, message: DescriptorProto, snake_case_flag: bool):
         # original field names
         self._message_fields = set(
             x.name for x in message.field
         )
         self._name_counter = Counter()
-        self._snake_case = snake_case
+        self._snake_case_flag = snake_case_flag
 
         # maps original field names to mangled ones
         self._mangled_names: Dict[str, str] = {}
@@ -303,7 +303,7 @@ class FieldMangler:
         for name in self._message_fields:
             self._process_name(name)
 
-    def _mangle_name(self, name):
+    def _mangle_name(self, name: str) -> str:
         self._name_counter[name] += 1
 
         while f'{name}_{self._name_counter[name]}' in self._message_fields:
@@ -311,8 +311,8 @@ class FieldMangler:
 
         return f'{name}_{self._name_counter[name]}'
 
-    def _process_name(self, name):
-        if self._snake_case:
+    def _process_name(self, name: str):
+        if self._snake_case_flag:
             py_name = to_snake_case(name)
         else:
             py_name = name
@@ -326,7 +326,7 @@ class FieldMangler:
 
         self._mangled_names[name] = py_name
 
-    def get(self, field: str):
+    def get(self, field: str) -> str:
         if field not in self._message_fields:
             raise ValueError('No such name')
 
@@ -334,9 +334,9 @@ class FieldMangler:
 
 
 class CodeGenerator:
-    def __init__(self, proto_file, index: Index, args):
-        self._proto_file = proto_file
-        self._index = index
+    def __init__(self, proto_file: FileDescriptorProto, index: Index, args):
+        self._proto_file: FileDescriptorProto = proto_file
+        self._index: Index = index
         self._args = args
         self._indent = 0
         self._uses_enums = False
@@ -346,7 +346,7 @@ class CodeGenerator:
         self._import_buffer = StringBuffer()
         self._field_manglers = {}
 
-    def resolve_field_name(self, message, field: str):
+    def resolve_field_name(self, message: DescriptorProto, field: str) -> str:
         if message.name not in self._field_manglers:
             self._field_manglers[message.name] = FieldMangler(
                 message,
@@ -365,7 +365,7 @@ class CodeGenerator:
         )
 
     @staticmethod
-    def import_name(file):
+    def file_to_import_name(file: FileDescriptorProto) -> str:
         return (
             file.name
                 .replace('.proto', '')
@@ -374,7 +374,7 @@ class CodeGenerator:
         )
 
     @staticmethod
-    def package_name(file):
+    def file_to_package_name(file: FileDescriptorProto) -> str:
         return (
             file.name
                 .replace('.proto', '')
@@ -383,11 +383,11 @@ class CodeGenerator:
         )
 
     @staticmethod
-    def resolve_google_protobuf_import(field):
+    def resolve_google_protobuf_import(field: FieldDescriptorProto) -> str:
         type_name = field.type_name.split(".")[-1]
         return f'protox.{type_name}'
 
-    def resolve_import(self, field):
+    def resolve_import(self, field: FieldDescriptorProto) -> str:
         """
         Requests import of the file in which the imported message is
         """
@@ -406,7 +406,7 @@ class CodeGenerator:
         except KeyError:
             file = self._index.proto_files[field_type]
 
-        package = self.package_name(file)
+        package = self.file_to_package_name(file)
         self._import_requests[file.name] = file
 
         return (
@@ -415,7 +415,7 @@ class CodeGenerator:
             field.type_name[2 + len(file.package):]
         )
 
-    def is_map_field(self, field) -> bool:
+    def is_map_field(self, field: FieldDescriptorProto) -> bool:
         if not is_message_field(field):
             return False
 
@@ -426,15 +426,15 @@ class CodeGenerator:
             self._index.messages[field.type_name]
         )
 
-    def is_map_message(self, message) -> bool:
+    def is_map_message(self, message: DescriptorProto) -> bool:
         return bool(message.options.map_entry)
 
-    def map_message_py_types(self, message):
+    def map_message_py_types(self, message: DescriptorProto) -> Tuple[str, str]:
         key_type = self.resolve_field_type(message.field[0])
         value_type = self.resolve_field_type(message.field[1])
         return key_type, value_type
 
-    def map_message_protox_types(self, message):
+    def map_message_protox_types(self, message: DescriptorProto) -> Tuple[str, str]:
         if is_message_field(message.field[0]):
             key_type = self.resolve_import(message.field[0])
         else:
@@ -455,7 +455,7 @@ class CodeGenerator:
 
         return key_type, value_type
 
-    def resolve_field_type(self, field):
+    def resolve_field_type(self, field: FieldDescriptorProto) -> str:
         if self.is_map_field(field):
             message = self._index.messages[field.type_name]
             key_type, value_type = self.map_message_py_types(message)
@@ -482,7 +482,7 @@ class CodeGenerator:
 
         return py_type
 
-    def apply_field_label(self, field, py_type):
+    def apply_field_label(self, field: FieldDescriptorProto, py_type: str) -> str:
         if self.is_map_field(field):
             self._uses_typing = True
         elif is_optional(field):
@@ -494,7 +494,7 @@ class CodeGenerator:
 
         return py_type
 
-    def write_message(self, message):
+    def write_message(self, message: DescriptorProto):
         w = self._buffer.write
         nl = self._buffer.nl
         indent = self._buffer.indent
@@ -537,7 +537,7 @@ class CodeGenerator:
 
             self.write_init(message)
 
-    def write_init(self, message):
+    def write_init(self, message: DescriptorProto):
         w = self._buffer.write
         indent = self._buffer.indent
 
@@ -566,7 +566,7 @@ class CodeGenerator:
 
             w(')')
 
-    def write_oneofs(self, message):
+    def write_oneofs(self, message: DescriptorProto):
         w = self._buffer.write
         one_ofs = collect_one_of(message).items()
 
@@ -581,7 +581,7 @@ class CodeGenerator:
 
         return bool(one_ofs)
 
-    def write_enum(self, enum_type):
+    def write_enum(self, enum_type: EnumDescriptorProto):
         self._uses_enums = True
 
         self._buffer.write(f'class {enum_type.name}(IntEnum):')
@@ -607,21 +607,21 @@ class CodeGenerator:
 
         for file in self._import_requests.values():
             if self._index.base_package:
-                import_path = self._index.base_package.replace('/', '.') + '.' + self.import_name(file)
+                import_path = self._index.base_package.replace('/', '.') + '.' + self.file_to_import_name(file)
             else:
-                import_path = self.import_name(file)
+                import_path = self.file_to_import_name(file)
 
             w(f'import {import_path + protobuf_file_postfix} as \\')
 
             with self._import_buffer.indent():
-                w(self.package_name(file) + protobuf_file_postfix)
+                w(self.file_to_package_name(file) + protobuf_file_postfix)
 
         if self._import_requests:
             nl()
 
         nl()
 
-    def write_define_fields(self, message, path=''):
+    def write_define_fields(self, message: DescriptorProto, path: str = ''):
         w = self._buffer.write
 
         if not message.field:
@@ -693,7 +693,7 @@ class CodeGenerator:
         for nested_type in message.nested_type:
             self.write_define_fields(nested_type, path=message.name + '.')
 
-    def generate(self) -> plugin_pb2.CodeGeneratorResponse.File:
+    def generate(self) -> CodeGeneratorResponse.File:
         nl = self._buffer.nl
 
         # enums
@@ -722,7 +722,7 @@ class CodeGenerator:
         if self._index.base_package:
             filename = self._index.base_package + '/' + filename
 
-        return plugin_pb2.CodeGeneratorResponse.File(
+        return CodeGeneratorResponse.File(
             name=filename,
             content=(
                 imports +
@@ -740,7 +740,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
         '--base-package-dir',
         default='',
         type=str,
-        help='Base python package directory relative to root directory. E.g. app/protobuf, .'
+        help='Base python package directory relative to the root directory. E.g. app/protobuf, .'
     )
     parser.add_argument(
         '--gen-deps',
@@ -762,19 +762,18 @@ def create_arg_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    # data = b'\n\x0bhello.proto\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\xfd\x01\n\x0bother.proto\x12\rother.package*%\n\x05Color\x12\x07\n\x03RED\x10\x00\x12\t\n\x05GREEN\x10\x01\x12\x08\n\x04BLUE\x10\x02J\xaf\x01\n\x06\x12\x04\x00\x00\x08\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x15\n\n\n\x02\x05\x00\x12\x04\x04\x00\x08\x01\n\n\n\x03\x05\x00\x01\x12\x03\x04\x05\n\n\x0b\n\x04\x05\x00\x02\x00\x12\x03\x05\x04\x0c\n\x0c\n\x05\x05\x00\x02\x00\x01\x12\x03\x05\x04\x07\n\x0c\n\x05\x05\x00\x02\x00\x02\x12\x03\x05\n\x0b\n\x0b\n\x04\x05\x00\x02\x01\x12\x03\x06\x04\x0e\n\x0c\n\x05\x05\x00\x02\x01\x01\x12\x03\x06\x04\t\n\x0c\n\x05\x05\x00\x02\x01\x02\x12\x03\x06\x0c\r\n\x0b\n\x04\x05\x00\x02\x02\x12\x03\x07\x04\r\n\x0c\n\x05\x05\x00\x02\x02\x01\x12\x03\x07\x04\x08\n\x0c\n\x05\x05\x00\x02\x02\x02\x12\x03\x07\x0b\x0cb\x06proto3z\xd8\x01\n\x0bhello.proto\x1a\x0bother.proto"7\n\tMyMessage\x12*\n\x05color\x18\x01 \x01(\x0e2\x14.other.package.ColorR\x05colorJ{\n\x06\x12\x04\x00\x00\x06\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\t\n\x02\x03\x00\x12\x03\x02\x07\x14\n\n\n\x02\x04\x00\x12\x04\x04\x00\x06\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x11\n\x0b\n\x04\x04\x00\x02\x00\x12\x03\x05\x04"\n\r\n\x05\x04\x00\x02\x00\x04\x12\x04\x05\x04\x04\x13\n\x0c\n\x05\x04\x00\x02\x00\x06\x12\x03\x05\x04\x17\n\x0c\n\x05\x04\x00\x02\x00\x01\x12\x03\x05\x18\x1d\n\x0c\n\x05\x04\x00\x02\x00\x03\x12\x03\x05 !b\x06proto3'
-    data = sys.stdin.buffer.read()
+    data = b'\n\x0bhello.proto\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\xfd\x01\n\x0bother.proto\x12\rother.package*%\n\x05Color\x12\x07\n\x03RED\x10\x00\x12\t\n\x05GREEN\x10\x01\x12\x08\n\x04BLUE\x10\x02J\xaf\x01\n\x06\x12\x04\x00\x00\x08\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x15\n\n\n\x02\x05\x00\x12\x04\x04\x00\x08\x01\n\n\n\x03\x05\x00\x01\x12\x03\x04\x05\n\n\x0b\n\x04\x05\x00\x02\x00\x12\x03\x05\x04\x0c\n\x0c\n\x05\x05\x00\x02\x00\x01\x12\x03\x05\x04\x07\n\x0c\n\x05\x05\x00\x02\x00\x02\x12\x03\x05\n\x0b\n\x0b\n\x04\x05\x00\x02\x01\x12\x03\x06\x04\x0e\n\x0c\n\x05\x05\x00\x02\x01\x01\x12\x03\x06\x04\t\n\x0c\n\x05\x05\x00\x02\x01\x02\x12\x03\x06\x0c\r\n\x0b\n\x04\x05\x00\x02\x02\x12\x03\x07\x04\r\n\x0c\n\x05\x05\x00\x02\x02\x01\x12\x03\x07\x04\x08\n\x0c\n\x05\x05\x00\x02\x02\x02\x12\x03\x07\x0b\x0cb\x06proto3z\xd8\x01\n\x0bhello.proto\x1a\x0bother.proto"7\n\tMyMessage\x12*\n\x05color\x18\x01 \x01(\x0e2\x14.other.package.ColorR\x05colorJ{\n\x06\x12\x04\x00\x00\x06\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\t\n\x02\x03\x00\x12\x03\x02\x07\x14\n\n\n\x02\x04\x00\x12\x04\x04\x00\x06\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x11\n\x0b\n\x04\x04\x00\x02\x00\x12\x03\x05\x04"\n\r\n\x05\x04\x00\x02\x00\x04\x12\x04\x05\x04\x04\x13\n\x0c\n\x05\x04\x00\x02\x00\x06\x12\x03\x05\x04\x17\n\x0c\n\x05\x04\x00\x02\x00\x01\x12\x03\x05\x18\x1d\n\x0c\n\x05\x04\x00\x02\x00\x03\x12\x03\x05 !b\x06proto3'
+    # data = sys.stdin.buffer.read()
     # debug(data)
     # return
 
     # Parse request
-    request = plugin_pb2.CodeGeneratorRequest()
-    request.ParseFromString(data)
+    request = CodeGeneratorRequest.from_bytes(data)
 
     # args
     arg_parser = create_arg_parser()
     args = arg_parser.parse_args(
-        shlex.split(request.parameter)
+        shlex.split(request.parameter or '')
     )
 
     # build index
@@ -798,7 +797,7 @@ def main():
             if x.name in files_to_generate
         ]
 
-    response = plugin_pb2.CodeGeneratorResponse(
+    response = CodeGeneratorResponse(
         file=[
             CodeGenerator(file, index, args).generate()
             for file in files
@@ -806,7 +805,7 @@ def main():
     )
 
     sys.stdout.buffer.write(
-        response.SerializeToString()
+        response.to_bytes()
     )
 
 
