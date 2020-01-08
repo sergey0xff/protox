@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package services.ping_pong;
+
+message Request {
+}
+
+message Response {
+}
+
+service PingPong {
+    rpc UnaryUnary (Request) returns (Response);
+    rpc UnaryStream (Request) returns (stream Response);
+    rpc StreamUnary (stream Request) returns (Response);
+    rpc StreamStream (stream Request) returns (stream Response);
+}

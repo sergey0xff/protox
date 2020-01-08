@@ -13,3 +13,12 @@ protox:
 		--protox_out=. \
 		--protox_opt=--base-package-dir=app/protobuf\
 		./protobuf_src/hello_protox.proto
+
+
+protox-service:
+	protoc \
+		--proto_path=protobuf_src \
+		--plugin=protoc-gen-protox=./protox/plugin/protox_gen.py\
+		--protox_out=. \
+		--protox_opt="--base-package-dir=app/protobuf --grpclib" \
+		./protobuf_src/simple_service.proto

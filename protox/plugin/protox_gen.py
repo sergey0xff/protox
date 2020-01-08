@@ -8,12 +8,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import List, Dict, Set, Tuple
 
+# FIXME: delete before releasing the library
 sys.path.append(
     str(Path(__file__).parent.parent.parent)
 )
-from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto
+from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto, \
+    ServiceDescriptorProto
 from protox.well_known_types.plugin import CodeGeneratorRequest, CodeGeneratorResponse
-
 
 reserved_names = [
     'False',
@@ -54,17 +55,22 @@ reserved_names = [
 
     # types,
     'protox',
+    'grpclib',
     'int',
     'float',
     'bool',
     'str',
     'bytes',
     'typing',
+    'abc',
+
+    # FIXME: `enum` probably not used
     'enum',
     'IntEnum',
 ]
 
 protobuf_file_postfix = '_pb'
+grpclib_file_postfix = '_grpclib'
 
 
 def pythonize_name(name: str) -> str:
@@ -722,21 +728,82 @@ class CodeGenerator:
         imports = self._import_buffer.read()
         content = self._buffer.read().strip('\n') + '\n'
 
-        filename = (
-            self._proto_file.name.strip().replace('.proto', '') +
-            f'{protobuf_file_postfix}.py'
-        )
-
-        if self._index.base_package:
-            filename = self._index.base_package + '/' + filename
-
         return CodeGeneratorResponse.File(
-            name=filename,
+            name=self.get_file_name(protobuf_file_postfix),
             content=(
                 imports +
                 content
             ),
         )
+
+    def get_file_name(self, postfix: str) -> str:
+        filename = (
+            self._proto_file.name.strip().replace('.proto', '') +
+            f'{postfix}.py'
+        )
+
+        if self._index.base_package:
+            filename = self._index.base_package + '/' + filename
+
+        return filename
+
+    def generate_grpclib_services(self) -> CodeGeneratorResponse.File:
+        buffer = StringBuffer()
+
+        for service in self._proto_file.service:
+            self.generate_grpclib_service(
+                service,
+                buffer,
+            )
+
+        return CodeGeneratorResponse.File(
+            name=self.get_file_name(grpclib_file_postfix),
+            content='',
+        )
+
+    def generate_grpclib_service(
+        self,
+        service: ServiceDescriptorProto,
+        buffer: StringBuffer,
+    ):
+        w = buffer.write
+
+        w(f'class {service.name}Base(abc.ABC):')
+
+        with buffer.indent():
+            if service.method:
+                for method in service.method:
+                    w('@abc.abstractmethod')
+                    w(f'async def {to_snake_case(method.name)}(self, stream: grpclib.server.Stream) -> None:')
+
+                    with buffer.indent():
+                        w('pass')
+
+                    buffer.nl()
+
+                w('def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:')
+
+                with buffer.indent():
+                    w('return {')
+                    for method in service.method:
+                        pass
+                    w('}')
+            else:
+                w('def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:')
+                with buffer.indent():
+                    w('return {}')
+
+        buffer.nl(2)
+
+        w(f'class {service.name}Stub:')
+        with buffer.indent():
+            if service.method:
+                # FIXME: to be implemented
+                # for method in service.method:
+                #     pass
+                w('pass')
+            else:
+                w('pass')
 
 
 def create_arg_parser() -> argparse.ArgumentParser:
@@ -770,8 +837,8 @@ def create_arg_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    # data = b'\n\x0bhello.proto\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\xfd\x01\n\x0bother.proto\x12\rother.package*%\n\x05Color\x12\x07\n\x03RED\x10\x00\x12\t\n\x05GREEN\x10\x01\x12\x08\n\x04BLUE\x10\x02J\xaf\x01\n\x06\x12\x04\x00\x00\x08\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x15\n\n\n\x02\x05\x00\x12\x04\x04\x00\x08\x01\n\n\n\x03\x05\x00\x01\x12\x03\x04\x05\n\n\x0b\n\x04\x05\x00\x02\x00\x12\x03\x05\x04\x0c\n\x0c\n\x05\x05\x00\x02\x00\x01\x12\x03\x05\x04\x07\n\x0c\n\x05\x05\x00\x02\x00\x02\x12\x03\x05\n\x0b\n\x0b\n\x04\x05\x00\x02\x01\x12\x03\x06\x04\x0e\n\x0c\n\x05\x05\x00\x02\x01\x01\x12\x03\x06\x04\t\n\x0c\n\x05\x05\x00\x02\x01\x02\x12\x03\x06\x0c\r\n\x0b\n\x04\x05\x00\x02\x02\x12\x03\x07\x04\r\n\x0c\n\x05\x05\x00\x02\x02\x01\x12\x03\x07\x04\x08\n\x0c\n\x05\x05\x00\x02\x02\x02\x12\x03\x07\x0b\x0cb\x06proto3z\xd8\x01\n\x0bhello.proto\x1a\x0bother.proto"7\n\tMyMessage\x12*\n\x05color\x18\x01 \x01(\x0e2\x14.other.package.ColorR\x05colorJ{\n\x06\x12\x04\x00\x00\x06\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\t\n\x02\x03\x00\x12\x03\x02\x07\x14\n\n\n\x02\x04\x00\x12\x04\x04\x00\x06\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x11\n\x0b\n\x04\x04\x00\x02\x00\x12\x03\x05\x04"\n\r\n\x05\x04\x00\x02\x00\x04\x12\x04\x05\x04\x04\x13\n\x0c\n\x05\x04\x00\x02\x00\x06\x12\x03\x05\x04\x17\n\x0c\n\x05\x04\x00\x02\x00\x01\x12\x03\x05\x18\x1d\n\x0c\n\x05\x04\x00\x02\x00\x03\x12\x03\x05 !b\x06proto3'
-    data = sys.stdin.buffer.read()
+    data = b'\n\x14simple_service.proto\x12)--base-package-dir=app/protobuf --grpclib\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\x81\x06\n\x14simple_service.proto\x12\x12services.ping_pong"\t\n\x07Request"\n\n\x08Response2\xba\x02\n\x08PingPong\x12G\n\nUnaryUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response\x12J\n\x0bUnaryStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response0\x01\x12J\n\x0bStreamUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x01\x12M\n\x0cStreamStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x010\x01J\xf8\x02\n\x06\x12\x04\x00\x00\x0f\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x1a\n\n\n\x02\x04\x00\x12\x04\x04\x00\x05\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x0f\n\n\n\x02\x04\x01\x12\x04\x07\x00\x08\x01\n\n\n\x03\x04\x01\x01\x12\x03\x07\x08\x10\n\n\n\x02\x06\x00\x12\x04\n\x00\x0f\x01\n\n\n\x03\x06\x00\x01\x12\x03\n\x08\x10\n\x0b\n\x04\x06\x00\x02\x00\x12\x03\x0b\x040\n\x0c\n\x05\x06\x00\x02\x00\x01\x12\x03\x0b\x08\x12\n\x0c\n\x05\x06\x00\x02\x00\x02\x12\x03\x0b\x14\x1b\n\x0c\n\x05\x06\x00\x02\x00\x03\x12\x03\x0b&.\n\x0b\n\x04\x06\x00\x02\x01\x12\x03\x0c\x048\n\x0c\n\x05\x06\x00\x02\x01\x01\x12\x03\x0c\x08\x13\n\x0c\n\x05\x06\x00\x02\x01\x02\x12\x03\x0c\x15\x1c\n\x0c\n\x05\x06\x00\x02\x01\x06\x12\x03\x0c\'-\n\x0c\n\x05\x06\x00\x02\x01\x03\x12\x03\x0c.6\n\x0b\n\x04\x06\x00\x02\x02\x12\x03\r\x048\n\x0c\n\x05\x06\x00\x02\x02\x01\x12\x03\r\x08\x13\n\x0c\n\x05\x06\x00\x02\x02\x05\x12\x03\r\x15\x1b\n\x0c\n\x05\x06\x00\x02\x02\x02\x12\x03\r\x1c#\n\x0c\n\x05\x06\x00\x02\x02\x03\x12\x03\r.6\n\x0b\n\x04\x06\x00\x02\x03\x12\x03\x0e\x04@\n\x0c\n\x05\x06\x00\x02\x03\x01\x12\x03\x0e\x08\x14\n\x0c\n\x05\x06\x00\x02\x03\x05\x12\x03\x0e\x16\x1c\n\x0c\n\x05\x06\x00\x02\x03\x02\x12\x03\x0e\x1d$\n\x0c\n\x05\x06\x00\x02\x03\x06\x12\x03\x0e/5\n\x0c\n\x05\x06\x00\x02\x03\x03\x12\x03\x0e6>b\x06proto3'
+    # data = sys.stdin.buffer.read()
     # debug(data)
     # return
 
@@ -779,9 +846,10 @@ def main():
     request = CodeGeneratorRequest.from_bytes(data)
 
     # args
+    parameter = (request.parameter or '').strip('"\'')
     arg_parser = create_arg_parser()
     args = arg_parser.parse_args(
-        shlex.split(request.parameter or '')
+        shlex.split(parameter)
     )
 
     # build index
@@ -805,10 +873,15 @@ def main():
             if x.name in files_to_generate
         ]
 
+    code_generators = [
+        CodeGenerator(file, index, args)
+        for file in files
+    ]
+
     response = CodeGeneratorResponse(
         file=[
-            CodeGenerator(file, index, args).generate()
-            for file in files
+            x.generate()
+            for x in code_generators
         ]
     )
 
