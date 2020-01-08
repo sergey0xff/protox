@@ -1,9 +1,11 @@
+from typing import Optional
+
 from protox import Message, fields
 
 
 class Any(Message):
-    type_url: str = fields.String(number=1)
-    value: bytes = fields.Bytes(number=2)
+    type_url: Optional[str] = fields.String(number=1)
+    value: Optional[bytes] = fields.Bytes(number=2)
 
     def __init__(
         self,

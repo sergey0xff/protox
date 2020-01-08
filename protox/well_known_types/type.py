@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-from typing import List
+from typing import List, Optional
 
 import protox
 from protox import Message, fields
@@ -14,8 +14,8 @@ class Syntax(IntEnum):
 
 
 class Option(Message):
-    name: str = fields.String(number=1)
-    value: Any = Any.as_field(number=2)
+    name: Optional[str] = fields.String(number=1)
+    value: Optional[Any] = Any.as_field(number=2)
 
     def __init__(
         self,
@@ -30,8 +30,8 @@ class Option(Message):
 
 
 class EnumValue(Message):
-    name: str = fields.String(number=1)
-    number: int = fields.Int32(number=2)
+    name: Optional[str] = fields.String(number=1)
+    number: Optional[int] = fields.Int32(number=2)
     options: List[Option] = Option.as_repeated(number=3)
 
     def __init__(
@@ -49,11 +49,11 @@ class EnumValue(Message):
 
 
 class Enum(Message):
-    name: str = fields.String(number=1)
+    name: Optional[str] = fields.String(number=1)
     enumvalue: List[EnumValue] = EnumValue.as_repeated(number=2)
     options: List[Option] = Option.as_repeated(number=3)
-    source_context: SourceContext = SourceContext.as_field(number=4)
-    syntax: Syntax = fields.EnumField(Syntax, number=5)
+    source_context: Optional[SourceContext] = SourceContext.as_field(number=4)
+    syntax: Optional[Syntax] = fields.EnumField(Syntax, number=5)
 
     def __init__(
         self,
@@ -101,16 +101,16 @@ class Field(Message):
         CARDINALITY_REQUIRED = 2
         CARDINALITY_REPEATED = 3
 
-    kind: Kind = fields.EnumField(Kind, number=1)
-    cardinality: Cardinality = fields.EnumField(Cardinality, number=2)
-    number: int = fields.Int32(number=3)
-    name: str = fields.String(number=4)
-    type_url: str = fields.String(number=6)
-    oneof_index: int = fields.Int32(number=7)
-    packed: int = fields.Bool(number=8)
+    kind: Optional[Kind] = fields.EnumField(Kind, number=1)
+    cardinality: Optional[Cardinality] = fields.EnumField(Cardinality, number=2)
+    number: Optional[int] = fields.Int32(number=3)
+    name: Optional[str] = fields.String(number=4)
+    type_url: Optional[str] = fields.String(number=6)
+    oneof_index: Optional[int] = fields.Int32(number=7)
+    packed: Optional[int] = fields.Bool(number=8)
     options: List[Option] = Option.as_repeated(number=9)
-    json_name: str = fields.String(number=10)
-    default_value: str = fields.String(number=11)
+    json_name: Optional[str] = fields.String(number=10)
+    default_value: Optional[str] = fields.String(number=11)
 
     def __init__(
         self,
@@ -141,12 +141,12 @@ class Field(Message):
 
 
 class Type(Message):
-    name: str = protox.String(number=1)
+    name: Optional[str] = protox.String(number=1)
     fields: List[Field] = Field.as_repeated(number=2)
     oneofs: List[str] = protox.String.as_repeated(number=3)
     options: List[Option] = Option.as_repeated(number=4)
-    source_context: SourceContext = SourceContext.as_field(number=5)
-    syntax: Syntax = protox.EnumField(Syntax, number=6)
+    source_context: Optional[SourceContext] = SourceContext.as_field(number=5)
+    syntax: Optional[Syntax] = protox.EnumField(Syntax, number=6)
 
     def __init__(
         self,

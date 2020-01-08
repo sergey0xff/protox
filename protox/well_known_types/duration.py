@@ -1,9 +1,11 @@
+from typing import Optional
+
 from protox import Message, fields
 
 
 class Duration(Message):
-    seconds: int = fields.Int64(number=1)
-    nanos: int = fields.Int32(number=2)
+    seconds: Optional[int] = fields.Int64(number=1)
+    nanos: Optional[int] = fields.Int32(number=2)
 
     def __init__(
         self,

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 
 from protox import Message
 from protox import fields
@@ -9,8 +10,8 @@ _SECONDS_PER_DAY = 24 * 3600
 
 
 class Timestamp(Message):
-    seconds: int = fields.Int64(number=1)
-    nanos: int = fields.Int32(number=2)
+    seconds: Optional[int] = fields.Int64(number=1)
+    nanos: Optional[int] = fields.Int32(number=2)
 
     def __init__(
         self,
