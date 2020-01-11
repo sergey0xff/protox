@@ -295,8 +295,8 @@ def is_group_field(field: FieldDescriptorProto) -> bool:
     return field.type == FieldDescriptorProto.Type.TYPE_GROUP
 
 
-def is_well_known_type_field(field: FieldDescriptorProto) -> bool:
-    return field.type_name.startswith('.google.protobuf')
+def is_well_known_type_field(type_name: str) -> bool:
+    return type_name.startswith('.google.protobuf')
 
 
 class FieldMangler:
@@ -394,16 +394,16 @@ class CodeGenerator:
         )
 
     @staticmethod
-    def resolve_google_protobuf_import(field: FieldDescriptorProto) -> str:
-        type_name = field.type_name.split(".")[-1]
+    def resolve_google_protobuf_import(type_name: str) -> str:
+        type_name = type_name.split(".")[-1]
         return f'protox.{type_name}'
 
-    def resolve_import(self, field: FieldDescriptorProto) -> str:
+    def resolve_field_import(self, field: FieldDescriptorProto) -> str:
         """
         Requests import of the file in which the imported message is
         """
-        if is_well_known_type_field(field):
-            return self.resolve_google_protobuf_import(field)
+        if is_well_known_type_field(field.type_name):
+            return self.resolve_google_protobuf_import(field.type_name)
 
         field_type = field.type_name
 
@@ -450,12 +450,12 @@ class CodeGenerator:
 
     def map_message_protox_types(self, message: DescriptorProto) -> Tuple[str, str]:
         if is_message_field(message.field[0]):
-            key_type = self.resolve_import(message.field[0])
+            key_type = self.resolve_field_import(message.field[0])
         else:
             key_type = 'protox.' + pb_to_protox_type(message.field[0].type)
 
         if is_message_field(message.field[1]):
-            value_type = self.resolve_import(message.field[1])
+            value_type = self.resolve_field_import(message.field[1])
         elif is_enum_field(message.field[1]):
             field = message.field[1]
             path = '.'.join(field.type_name.split('.')[:-1])
@@ -463,7 +463,7 @@ class CodeGenerator:
             if self.is_local_type(path):
                 value_type = field.type_name.lstrip('.')
             else:
-                value_type = self.resolve_import(field)
+                value_type = self.resolve_field_import(field)
         else:
             value_type = 'protox.' + pb_to_protox_type(message.field[1].type)
 
@@ -479,14 +479,14 @@ class CodeGenerator:
             if self.is_local_type(field.type_name):
                 py_type = f"'{field.type_name.lstrip('.')}'"
             else:
-                py_type = self.resolve_import(field)
+                py_type = self.resolve_field_import(field)
         elif is_enum_field(field):
             path = '.'.join(field.type_name.split('.')[:-1])
 
             if self.is_local_type(path):
                 py_type = f"'{field.type_name.lstrip('.')}'"
             else:
-                py_type = self.resolve_import(field)
+                py_type = self.resolve_field_import(field)
         elif is_group_field(field):
             raise NotImplementedError(
                 'Groups are not supported yet'
@@ -751,17 +751,17 @@ class CodeGenerator:
         buffer = StringBuffer()
 
         for service in self._proto_file.service:
-            self.generate_grpclib_service(
+            self.write_grpclib_service(
                 service,
                 buffer,
             )
 
         return CodeGeneratorResponse.File(
             name=self.get_file_name(grpclib_file_postfix),
-            content='',
+            content=buffer.read(),
         )
 
-    def generate_grpclib_service(
+    def write_grpclib_service(
         self,
         service: ServiceDescriptorProto,
         buffer: StringBuffer,
@@ -774,7 +774,7 @@ class CodeGenerator:
             if service.method:
                 for method in service.method:
                     w('@abc.abstractmethod')
-                    w(f'async def {to_snake_case(method.name)}(self, stream: grpclib.server.Stream) -> None:')
+                    w(f'async def {to_snake_case(method.name)}(self, stream: grpclib.server.Stream):')
 
                     with buffer.indent():
                         w('pass')
@@ -785,8 +785,29 @@ class CodeGenerator:
 
                 with buffer.indent():
                     w('return {')
-                    for method in service.method:
-                        pass
+
+                    with buffer.indent():
+                        for method in service.method:
+                            w(f"'/{service.name}/{method.name}': grpclib.const.Handler(")
+
+                            with buffer.indent():
+                                cardinality_map = {
+                                    False: 'UNARY',
+                                    True: 'STREAM'
+                                }
+                                buffer.write(f'self.{to_snake_case(method.name)},')
+                                buffer.write(
+                                    'grpclib.const.Cardinality.',
+                                    cardinality_map[method.client_streaming],
+                                    '_',
+                                    cardinality_map[method.server_streaming],
+                                    ',',
+                                )
+                                buffer.write(f'RequestMessage,')
+                                buffer.write(f'ResponseMessage,')
+
+                            w('),')
+
                     w('}')
             else:
                 w('def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:')
@@ -878,6 +899,9 @@ def main():
         for file in files
     ]
 
+    for x in code_generators:
+        print(x.generate_grpclib_services().content)
+
     response = CodeGeneratorResponse(
         file=[
             x.generate()
@@ -885,9 +909,9 @@ def main():
         ]
     )
 
-    sys.stdout.buffer.write(
-        response.to_bytes()
-    )
+    # sys.stdout.buffer.write(
+    #     response.to_bytes()
+    # )
 
 
 if __name__ == '__main__':
