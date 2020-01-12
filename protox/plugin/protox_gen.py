@@ -747,25 +747,68 @@ class CodeGenerator:
 
         return filename
 
-    def generate_grpclib_services(self) -> CodeGeneratorResponse.File:
+    def grpclib_imports(self, import_requests: dict) -> str:
         buffer = StringBuffer()
 
+        buffer.write('import abc')
+        buffer.write('import typing')
+        buffer.nl()
+
+        buffer.write('import grpclib.const')
+        buffer.write('import grpclib.client')
+        buffer.write('import grpclib.server')
+        buffer.nl()
+
+        for file in import_requests.values():
+            if self._index.base_package:
+                import_path = self._index.base_package.replace('/', '.') + '.' + self.file_to_import_name(file)
+            else:
+                import_path = self.file_to_import_name(file)
+
+            buffer.write(f'import {import_path + protobuf_file_postfix} as \\')
+
+            with buffer.indent():
+                buffer.write(self.file_to_package_name(file) + protobuf_file_postfix)
+
+        buffer.nl(2)
+        return buffer.read()
+
+    def generate_grpclib_services(self) -> CodeGeneratorResponse.File:
+        buffer = StringBuffer()
+        import_requests = {}
+
         for service in self._proto_file.service:
-            self.write_grpclib_service(
+            service_imports = self.write_grpclib_service(
                 service,
                 buffer,
             )
+            import_requests.update(service_imports)
 
         return CodeGeneratorResponse.File(
             name=self.get_file_name(grpclib_file_postfix),
-            content=buffer.read(),
+            content=self.grpclib_imports(import_requests) + buffer.read(),
         )
+
+    def grpc_type_to_py_name(self, grpc_type: str, import_requests: dict):
+        file = self._index.proto_files[grpc_type]
+        import_requests[file.name] = file
+
+        return (
+            self.file_to_package_name(file) +
+            protobuf_file_postfix +
+            '.' +
+            grpc_type.split('.')[-1]
+        )
+
+    def grpc_url(self, service_name: str, method_name: str):
+        return f'/{self._proto_file.package}.{service_name}/{method_name}'
 
     def write_grpclib_service(
         self,
         service: ServiceDescriptorProto,
         buffer: StringBuffer,
-    ):
+    ) -> dict:
+        import_requests = {}
         w = buffer.write
 
         w(f'class {service.name}Base(abc.ABC):')
@@ -788,13 +831,14 @@ class CodeGenerator:
 
                     with buffer.indent():
                         for method in service.method:
-                            w(f"'/{service.name}/{method.name}': grpclib.const.Handler(")
+                            w(f"'{self.grpc_url(service.name, method.name)}': grpclib.const.Handler(")
 
                             with buffer.indent():
                                 cardinality_map = {
                                     False: 'UNARY',
                                     True: 'STREAM'
                                 }
+
                                 buffer.write(f'self.{to_snake_case(method.name)},')
                                 buffer.write(
                                     'grpclib.const.Cardinality.',
@@ -803,8 +847,17 @@ class CodeGenerator:
                                     cardinality_map[method.server_streaming],
                                     ',',
                                 )
-                                buffer.write(f'RequestMessage,')
-                                buffer.write(f'ResponseMessage,')
+                                input_message = self.grpc_type_to_py_name(
+                                    method.input_type,
+                                    import_requests,
+                                )
+                                output_message = self.grpc_type_to_py_name(
+                                    method.output_type,
+                                    import_requests,
+                                )
+
+                                buffer.write(f'{input_message},')
+                                buffer.write(f'{output_message},')
 
                             w('),')
 
@@ -818,13 +871,44 @@ class CodeGenerator:
 
         w(f'class {service.name}Stub:')
         with buffer.indent():
+            cardinality_map = {
+                False: 'Unary',
+                True: 'Stream'
+            }
+
             if service.method:
-                # FIXME: to be implemented
-                # for method in service.method:
-                #     pass
-                w('pass')
+                w('def __init__(self, channel: grpclib.client.Channel):')
+
+                with buffer.indent():
+                    for method in service.method:
+                        w(
+                            'self.',
+                            to_snake_case(method.name),
+                            ' = grpclib.client.',
+                            cardinality_map[method.client_streaming],
+                            cardinality_map[method.server_streaming],
+                            'Method(',
+                        )
+                        input_message = self.grpc_type_to_py_name(
+                            method.input_type,
+                            import_requests,
+                        )
+                        output_message = self.grpc_type_to_py_name(
+                            method.output_type,
+                            import_requests,
+                        )
+
+                        with buffer.indent():
+                            w('channel,'),
+                            w("'", self.grpc_url(service.name, method.name), "'", ',')
+                            w(input_message, ',')
+                            w(output_message, ',')
+
+                        w(')')
             else:
                 w('pass')
+
+        return import_requests
 
 
 def create_arg_parser() -> argparse.ArgumentParser:
@@ -858,8 +942,8 @@ def create_arg_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    data = b'\n\x14simple_service.proto\x12)--base-package-dir=app/protobuf --grpclib\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\x81\x06\n\x14simple_service.proto\x12\x12services.ping_pong"\t\n\x07Request"\n\n\x08Response2\xba\x02\n\x08PingPong\x12G\n\nUnaryUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response\x12J\n\x0bUnaryStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response0\x01\x12J\n\x0bStreamUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x01\x12M\n\x0cStreamStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x010\x01J\xf8\x02\n\x06\x12\x04\x00\x00\x0f\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x1a\n\n\n\x02\x04\x00\x12\x04\x04\x00\x05\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x0f\n\n\n\x02\x04\x01\x12\x04\x07\x00\x08\x01\n\n\n\x03\x04\x01\x01\x12\x03\x07\x08\x10\n\n\n\x02\x06\x00\x12\x04\n\x00\x0f\x01\n\n\n\x03\x06\x00\x01\x12\x03\n\x08\x10\n\x0b\n\x04\x06\x00\x02\x00\x12\x03\x0b\x040\n\x0c\n\x05\x06\x00\x02\x00\x01\x12\x03\x0b\x08\x12\n\x0c\n\x05\x06\x00\x02\x00\x02\x12\x03\x0b\x14\x1b\n\x0c\n\x05\x06\x00\x02\x00\x03\x12\x03\x0b&.\n\x0b\n\x04\x06\x00\x02\x01\x12\x03\x0c\x048\n\x0c\n\x05\x06\x00\x02\x01\x01\x12\x03\x0c\x08\x13\n\x0c\n\x05\x06\x00\x02\x01\x02\x12\x03\x0c\x15\x1c\n\x0c\n\x05\x06\x00\x02\x01\x06\x12\x03\x0c\'-\n\x0c\n\x05\x06\x00\x02\x01\x03\x12\x03\x0c.6\n\x0b\n\x04\x06\x00\x02\x02\x12\x03\r\x048\n\x0c\n\x05\x06\x00\x02\x02\x01\x12\x03\r\x08\x13\n\x0c\n\x05\x06\x00\x02\x02\x05\x12\x03\r\x15\x1b\n\x0c\n\x05\x06\x00\x02\x02\x02\x12\x03\r\x1c#\n\x0c\n\x05\x06\x00\x02\x02\x03\x12\x03\r.6\n\x0b\n\x04\x06\x00\x02\x03\x12\x03\x0e\x04@\n\x0c\n\x05\x06\x00\x02\x03\x01\x12\x03\x0e\x08\x14\n\x0c\n\x05\x06\x00\x02\x03\x05\x12\x03\x0e\x16\x1c\n\x0c\n\x05\x06\x00\x02\x03\x02\x12\x03\x0e\x1d$\n\x0c\n\x05\x06\x00\x02\x03\x06\x12\x03\x0e/5\n\x0c\n\x05\x06\x00\x02\x03\x03\x12\x03\x0e6>b\x06proto3'
-    # data = sys.stdin.buffer.read()
+    # data = b'\n\x14simple_service.proto\x12)--base-package-dir=app/protobuf --grpclib\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\x81\x06\n\x14simple_service.proto\x12\x12services.ping_pong"\t\n\x07Request"\n\n\x08Response2\xba\x02\n\x08PingPong\x12G\n\nUnaryUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response\x12J\n\x0bUnaryStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response0\x01\x12J\n\x0bStreamUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x01\x12M\n\x0cStreamStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x010\x01J\xf8\x02\n\x06\x12\x04\x00\x00\x0f\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x1a\n\n\n\x02\x04\x00\x12\x04\x04\x00\x05\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x0f\n\n\n\x02\x04\x01\x12\x04\x07\x00\x08\x01\n\n\n\x03\x04\x01\x01\x12\x03\x07\x08\x10\n\n\n\x02\x06\x00\x12\x04\n\x00\x0f\x01\n\n\n\x03\x06\x00\x01\x12\x03\n\x08\x10\n\x0b\n\x04\x06\x00\x02\x00\x12\x03\x0b\x040\n\x0c\n\x05\x06\x00\x02\x00\x01\x12\x03\x0b\x08\x12\n\x0c\n\x05\x06\x00\x02\x00\x02\x12\x03\x0b\x14\x1b\n\x0c\n\x05\x06\x00\x02\x00\x03\x12\x03\x0b&.\n\x0b\n\x04\x06\x00\x02\x01\x12\x03\x0c\x048\n\x0c\n\x05\x06\x00\x02\x01\x01\x12\x03\x0c\x08\x13\n\x0c\n\x05\x06\x00\x02\x01\x02\x12\x03\x0c\x15\x1c\n\x0c\n\x05\x06\x00\x02\x01\x06\x12\x03\x0c\'-\n\x0c\n\x05\x06\x00\x02\x01\x03\x12\x03\x0c.6\n\x0b\n\x04\x06\x00\x02\x02\x12\x03\r\x048\n\x0c\n\x05\x06\x00\x02\x02\x01\x12\x03\r\x08\x13\n\x0c\n\x05\x06\x00\x02\x02\x05\x12\x03\r\x15\x1b\n\x0c\n\x05\x06\x00\x02\x02\x02\x12\x03\r\x1c#\n\x0c\n\x05\x06\x00\x02\x02\x03\x12\x03\r.6\n\x0b\n\x04\x06\x00\x02\x03\x12\x03\x0e\x04@\n\x0c\n\x05\x06\x00\x02\x03\x01\x12\x03\x0e\x08\x14\n\x0c\n\x05\x06\x00\x02\x03\x05\x12\x03\x0e\x16\x1c\n\x0c\n\x05\x06\x00\x02\x03\x02\x12\x03\x0e\x1d$\n\x0c\n\x05\x06\x00\x02\x03\x06\x12\x03\x0e/5\n\x0c\n\x05\x06\x00\x02\x03\x03\x12\x03\x0e6>b\x06proto3'
+    data = sys.stdin.buffer.read()
     # debug(data)
     # return
 
@@ -899,19 +983,24 @@ def main():
         for file in files
     ]
 
-    for x in code_generators:
-        print(x.generate_grpclib_services().content)
+    response_files = [
+        x.generate()
+        for x in code_generators
+    ]
 
-    response = CodeGeneratorResponse(
-        file=[
-            x.generate()
+    if args.grpclib:
+        response_files += [
+            x.generate_grpclib_services()
             for x in code_generators
         ]
+
+    response = CodeGeneratorResponse(
+        file=response_files
     )
 
-    # sys.stdout.buffer.write(
-    #     response.to_bytes()
-    # )
+    sys.stdout.buffer.write(
+        response.to_bytes()
+    )
 
 
 if __name__ == '__main__':
