@@ -1,9 +1,17 @@
-syntax = "proto2";
+syntax = "proto3";
+
+package imported;
 
 message ImportedMessage {
-    required int32 x = 1;
+    enum Hello {
+        ONE = 0;
+        TWO = 1;
+        THREE = 2;
+    }
+
+    int32 x = 1;
 
     message Nested {
-        required int32 x = 1;
+        int32 x = 1;
     }
 }

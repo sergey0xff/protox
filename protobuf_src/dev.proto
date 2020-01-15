@@ -1,8 +1,12 @@
 syntax = "proto3";
 
-message Hello {
-    int32 async = 1;
-    int32 getattr = 2;
+import "imported.proto";
+import "imported_enum.proto";
+
+
+message Debug {
+    imported.ImportedMessage.Hello hello_enum = 1;
+    Hello.Color color = 2;
 }
 
 

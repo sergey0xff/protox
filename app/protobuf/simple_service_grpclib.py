@@ -26,7 +26,7 @@ class PingPongBase(abc.ABC):
     async def stream_stream(self, stream: grpclib.server.Stream):
         pass
 
-    def __mapping__(self) -> typing.Mapping[str, grpclib.const.Handler]:
+    def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:
         return {
             '/services.ping_pong.PingPong/UnaryUnary': grpclib.const.Handler(
                 self.unary_unary,

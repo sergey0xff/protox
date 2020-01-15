@@ -357,6 +357,9 @@ class CodeGenerator:
         self._import_buffer = StringBuffer()
         self._field_manglers = {}
 
+    def has_services(self) -> bool:
+        return bool(self._proto_file.service)
+
     def resolve_field_name(self, message: DescriptorProto, field: str) -> str:
         if message.name not in self._field_manglers:
             self._field_manglers[message.name] = FieldMangler(
@@ -419,12 +422,14 @@ class CodeGenerator:
 
         package = self.file_to_package_name(file)
         self._import_requests[file.name] = file
-
-        return (
+        imported_name = (
             package +
-            f'{protobuf_file_postfix}.' +
-            field.type_name[2 + len(file.package):]
+            protobuf_file_postfix.rstrip('.') +
+            '.' +
+            field_type[1 + len(file.package or ''):].lstrip('.')
         )
+
+        return imported_name
 
     def is_map_field(self, field: FieldDescriptorProto) -> bool:
         if not is_message_field(field):
@@ -992,6 +997,7 @@ def main():
         response_files += [
             x.generate_grpclib_services()
             for x in code_generators
+            if x.has_services()
         ]
 
     response = CodeGeneratorResponse(
