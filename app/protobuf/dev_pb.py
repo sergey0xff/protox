@@ -21,7 +21,6 @@ class Debug(protox.Message):
             )
 
 
-
 class Hello(protox.Message):
     pass
 

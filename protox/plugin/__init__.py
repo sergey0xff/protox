@@ -85,6 +85,10 @@ def to_snake_case(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
+def fix_redundant_newlines(text: str) -> str:
+    return re.sub(r'\n{3,}', '\n\n\n', text)
+
+
 def is_empty_message(message: DescriptorProto) -> bool:
     return not (
         message.nested_type or
@@ -753,7 +757,7 @@ class CodeGenerator:
 
         return CodeGeneratorResponse.File(
             name=self.get_file_name(protobuf_file_postfix),
-            content=(
+            content=fix_redundant_newlines(
                 imports +
                 content
             ),
