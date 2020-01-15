@@ -3,7 +3,8 @@ syntax = "proto3";
 import "service/imported.proto";
 
 message Debug {
-    repeated imported.ImportedMessage.Hello hello_enum = 1;
+    imported.ImportedMessage.Hello hello_enum = 1;
+    repeated imported.ImportedMessage.Hello repeated_enum = 2;
 }
 
 

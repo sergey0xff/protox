@@ -674,7 +674,11 @@ class CodeGenerator:
                 elif is_enum_field(field):
                     field_type = 'protox.EnumField'
                     py_enum = self.resolve_field_type(field).strip("'")
-                    field_kwargs['of_type'] = py_enum
+
+                    if is_repeated(field):
+                        field_kwargs['of_type'] = py_enum
+                    else:
+                        field_kwargs['py_enum'] = py_enum
 
                     if field.default_value:
                         field_kwargs['default'] = py_enum + '.' + field.default_value
