@@ -357,6 +357,12 @@ class CodeGenerator:
         self._import_buffer = StringBuffer()
         self._field_manglers = {}
 
+    def empty(self) -> bool:
+        return not (
+            self._proto_file.enum_type or
+            self._proto_file.message_type
+        )
+
     def has_services(self) -> bool:
         return bool(self._proto_file.service)
 
@@ -995,6 +1001,7 @@ def main():
     response_files = [
         x.generate()
         for x in code_generators
+        if not x.empty()
     ]
 
     if args.grpclib:
