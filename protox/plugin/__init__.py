@@ -932,7 +932,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
         help='Base python package directory relative to the root directory. E.g. app/protobuf, .'
     )
     parser.add_argument(
-        '--gen-deps',
+        '--with-dependencies',
         action='store_true',
         help='If enabled all imported .proto files are also generated',
     )
@@ -981,7 +981,7 @@ def main():
         if not x.name.startswith('google/protobuf/')
     ]
 
-    if not args.gen_deps:
+    if not args.with_dependencies:
         files = [
             x for x in request.proto_file
             if x.name in files_to_generate
