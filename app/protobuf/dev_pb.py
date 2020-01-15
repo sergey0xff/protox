@@ -19,3 +19,16 @@ class Debug(protox.Message):
             super().__init__(
                 number=number,
             )
+
+
+
+class Hello(protox.Message):
+    pass
+
+
+protox.define_fields(
+    Debug.Nested,
+    number=protox.EnumField(
+        number=1, py_enum=Debug.Nested.Number, required=False
+    ),
+)

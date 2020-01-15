@@ -10,6 +10,12 @@ message Debug {
 
         Number number = 1;
     }
+//    Nested.Number number = 1;
+}
+
+
+message Hello {
+
 }
 
 

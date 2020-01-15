@@ -86,10 +86,10 @@ def to_snake_case(name: str) -> str:
 
 
 def is_empty_message(message: DescriptorProto) -> bool:
-    return (
-        not message.nested_type and
-        not message.field and
-        not message.enum_type
+    return not (
+        message.nested_type or
+        message.field or
+        message.enum_type
     )
 
 
@@ -653,6 +653,9 @@ class CodeGenerator:
     def write_define_fields(self, message: DescriptorProto, path: str = ''):
         w = self._buffer.write
 
+        for nested_type in message.nested_type:
+            self.write_define_fields(nested_type, path=message.name + '.')
+
         if not message.field:
             return
 
@@ -726,9 +729,6 @@ class CodeGenerator:
                 w('),')
 
         w(')\n')
-
-        for nested_type in message.nested_type:
-            self.write_define_fields(nested_type, path=message.name + '.')
 
     def generate(self) -> CodeGeneratorResponse.File:
         nl = self._buffer.nl
@@ -965,31 +965,22 @@ def create_arg_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    # data = b'\n\x14simple_service.proto\x12)--base-package-dir=app/protobuf --grpclib\x1a\x08\x08\x03\x10\x06\x18\x01"\x00z\x81\x06\n\x14simple_service.proto\x12\x12services.ping_pong"\t\n\x07Request"\n\n\x08Response2\xba\x02\n\x08PingPong\x12G\n\nUnaryUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response\x12J\n\x0bUnaryStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response0\x01\x12J\n\x0bStreamUnary\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x01\x12M\n\x0cStreamStream\x12\x1b.services.ping_pong.Request\x1a\x1c.services.ping_pong.Response(\x010\x01J\xf8\x02\n\x06\x12\x04\x00\x00\x0f\x01\n\x08\n\x01\x0c\x12\x03\x00\x00\x12\n\x08\n\x01\x02\x12\x03\x02\x08\x1a\n\n\n\x02\x04\x00\x12\x04\x04\x00\x05\x01\n\n\n\x03\x04\x00\x01\x12\x03\x04\x08\x0f\n\n\n\x02\x04\x01\x12\x04\x07\x00\x08\x01\n\n\n\x03\x04\x01\x01\x12\x03\x07\x08\x10\n\n\n\x02\x06\x00\x12\x04\n\x00\x0f\x01\n\n\n\x03\x06\x00\x01\x12\x03\n\x08\x10\n\x0b\n\x04\x06\x00\x02\x00\x12\x03\x0b\x040\n\x0c\n\x05\x06\x00\x02\x00\x01\x12\x03\x0b\x08\x12\n\x0c\n\x05\x06\x00\x02\x00\x02\x12\x03\x0b\x14\x1b\n\x0c\n\x05\x06\x00\x02\x00\x03\x12\x03\x0b&.\n\x0b\n\x04\x06\x00\x02\x01\x12\x03\x0c\x048\n\x0c\n\x05\x06\x00\x02\x01\x01\x12\x03\x0c\x08\x13\n\x0c\n\x05\x06\x00\x02\x01\x02\x12\x03\x0c\x15\x1c\n\x0c\n\x05\x06\x00\x02\x01\x06\x12\x03\x0c\'-\n\x0c\n\x05\x06\x00\x02\x01\x03\x12\x03\x0c.6\n\x0b\n\x04\x06\x00\x02\x02\x12\x03\r\x048\n\x0c\n\x05\x06\x00\x02\x02\x01\x12\x03\r\x08\x13\n\x0c\n\x05\x06\x00\x02\x02\x05\x12\x03\r\x15\x1b\n\x0c\n\x05\x06\x00\x02\x02\x02\x12\x03\r\x1c#\n\x0c\n\x05\x06\x00\x02\x02\x03\x12\x03\r.6\n\x0b\n\x04\x06\x00\x02\x03\x12\x03\x0e\x04@\n\x0c\n\x05\x06\x00\x02\x03\x01\x12\x03\x0e\x08\x14\n\x0c\n\x05\x06\x00\x02\x03\x05\x12\x03\x0e\x16\x1c\n\x0c\n\x05\x06\x00\x02\x03\x02\x12\x03\x0e\x1d$\n\x0c\n\x05\x06\x00\x02\x03\x06\x12\x03\x0e/5\n\x0c\n\x05\x06\x00\x02\x03\x03\x12\x03\x0e6>b\x06proto3'
     data = sys.stdin.buffer.read()
-    # debug(data)
-    # return
-
-    # Parse request
     request = CodeGeneratorRequest.from_bytes(data)
 
-    # args
     parameter = (request.parameter or '').strip('"\'')
     arg_parser = create_arg_parser()
     args = arg_parser.parse_args(
         shlex.split(parameter)
     )
 
-    # build index
     index = Index(
         request,
         args.base_package_dir
     )
 
-    # Create response
     files_to_generate: Set[str] = set(request.file_to_generate)
 
-    # filter out google/protobuf files
     files = [
         x for x in request.proto_file
         if not x.name.startswith('google/protobuf/')
