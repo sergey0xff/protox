@@ -1,10 +1,15 @@
 syntax = "proto3";
 
-import "service/imported.proto";
+package debug.nested;
 
 message Debug {
-    imported.ImportedMessage.Hello hello_enum = 1;
-    repeated imported.ImportedMessage.Hello repeated_enum = 2;
+    message Nested {
+        enum Number {
+            A = 0;
+        }
+
+        Number number = 1;
+    }
 }
 
 

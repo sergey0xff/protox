@@ -380,7 +380,8 @@ class CodeGenerator:
         Checks if py_type defined in current file
         """
         return (
-            py_type == '' or
+            not py_type
+            or
             self._index.proto_files.get(py_type) == self._proto_file
         )
 
@@ -495,7 +496,10 @@ class CodeGenerator:
             path = '.'.join(field.type_name.split('.')[:-1])
 
             if self.is_local_type(path):
-                py_type = f"'{field.type_name.lstrip('.')}'"
+                field_type = field.type_name.lstrip('.')
+                field_type = field_type[len(self._proto_file.package):]
+                field_type = field_type.lstrip('.')
+                py_type = f"'{field_type}'"
             else:
                 py_type = self.resolve_field_import(field)
         elif is_group_field(field):
