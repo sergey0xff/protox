@@ -1,12 +1,9 @@
 syntax = "proto3";
 
 import "imported.proto";
-import "imported_enum.proto";
-
 
 message Debug {
-    imported.ImportedMessage.Hello hello_enum = 1;
-    Hello.Color color = 2;
+    repeated imported.ImportedMessage.Hello hello_enum = 1;
 }
 
 

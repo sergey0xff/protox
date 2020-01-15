@@ -1,7 +1,7 @@
 import io
 from abc import ABCMeta
 from enum import IntEnum
-from typing import BinaryIO, Tuple, List, Callable, Optional, TypeVar, Type, Dict, Union
+from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Union
 
 from protox.encoding import decode_header, wire_type_to_decoder
 from protox.exceptions import MessageEncodeError, MessageDecodeError, FieldValidationError

@@ -668,7 +668,7 @@ class CodeGenerator:
                 elif is_enum_field(field):
                     field_type = 'protox.EnumField'
                     py_enum = self.resolve_field_type(field).strip("'")
-                    field_kwargs['py_enum'] = py_enum
+                    field_kwargs['of_type'] = py_enum
 
                     if field.default_value:
                         field_kwargs['default'] = py_enum + '.' + field.default_value
@@ -689,7 +689,11 @@ class CodeGenerator:
                         field_kwargs['packed'] = True
 
                     field_type = field_type.replace('.as_field', '')
-                    field_type = f'{field_type}.as_repeated'
+
+                    if is_enum_field(field):
+                        field_type = f'protox.Repeated'
+                    else:
+                        field_type = f'{field_type}.as_repeated'
                 elif is_optional(field):
                     field_kwargs['required'] = 'False'
                 else:

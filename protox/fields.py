@@ -225,6 +225,12 @@ class Repeated(Field):
 
         super().__init__(number=number)
 
+    @classmethod
+    def as_repeated(cls, *, number: int, packed: bool = False) -> 'Repeated':
+        raise Exception(
+            'Cannot created repeated from repeated'
+        )
+
     @property
     def field(self):
         return self._field
