@@ -10,17 +10,14 @@ class Debug(protox.Message):
             A = 0
 
         number: typing.Optional['Debug.Nested.Number']
-        empty: typing.Optional[protox.Empty]
 
         def __init__(
             self,
             *,
             number: typing.Optional['Debug.Nested.Number'] = None,
-            empty: typing.Optional[protox.Empty] = None,
         ):
             super().__init__(
                 number=number,
-                empty=empty,
             )
 
     nested: typing.Optional['Debug.Nested']
@@ -42,9 +39,6 @@ protox.define_fields(
     Debug.Nested,
     number=protox.EnumField(
         number=1, py_enum=Debug.Nested.Number, required=False
-    ),
-    empty=protox.Empty.as_field(
-        number=2, required=False
     ),
 )
 

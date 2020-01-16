@@ -299,6 +299,13 @@ def is_group_field(field: FieldDescriptorProto) -> bool:
     return field.type == FieldDescriptorProto.Type.TYPE_GROUP
 
 
+def is_map_message(message: DescriptorProto) -> bool:
+    try:
+        return bool(message.options.map_entry)
+    except AttributeError:
+        return False
+
+
 def is_well_known_type_field(type_name: str) -> bool:
     return type_name.startswith('.google.protobuf')
 
@@ -456,15 +463,9 @@ class CodeGenerator:
         if not is_repeated(field):
             return False
 
-        return self.is_map_message(
+        return is_map_message(
             self._index.messages[field.type_name]
         )
-
-    def is_map_message(self, message: DescriptorProto) -> bool:
-        try:
-            return bool(message.options.map_entry)
-        except AttributeError:
-            return False
 
     def map_message_py_types(self, message: DescriptorProto) -> Tuple[str, str]:
         key_type = self.resolve_field_type(message.field[0])
@@ -552,7 +553,7 @@ class CodeGenerator:
 
             # nested messages
             for nested_type in message.nested_type:
-                if not self.is_map_message(nested_type):
+                if not is_map_message(nested_type):
                     self.write_message(nested_type)
                     nl()
 
@@ -662,7 +663,7 @@ class CodeGenerator:
         w = self._buffer.write
 
         for nested_type in message.nested_type:
-            if nested_type.name.endswith('MapEntry'):
+            if is_map_message(nested_type):
                 continue
 
             self.write_define_fields(nested_type, path=message.name + '.')
