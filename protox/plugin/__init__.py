@@ -393,7 +393,7 @@ class CodeGenerator:
 
     def get_local_type(self, type_name: str) -> str:
         field_type = type_name.lstrip('.')
-        field_type = field_type[len(self._proto_file.package):]
+        field_type = field_type[len(self._proto_file.package or ''):]
         field_type = field_type.lstrip('.')
 
         return field_type
@@ -474,7 +474,10 @@ class CodeGenerator:
             key_type = 'protox.' + pb_to_protox_type(message.field[0].type)
 
         if is_message_field(message.field[1]):
-            value_type = self.resolve_field_import(message.field[1])
+            if self.is_local_type(message.field[1].type_name):
+                value_type = self.get_local_type(message.field[1].type_name)
+            else:
+                value_type = self.resolve_field_import(message.field[1])
         elif is_enum_field(message.field[1]):
             field = message.field[1]
             path = '.'.join(field.type_name.split('.')[:-1])
