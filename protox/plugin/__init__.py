@@ -389,6 +389,13 @@ class CodeGenerator:
             self._index.proto_files.get(py_type) == self._proto_file
         )
 
+    def get_local_type(self, type_name: str) -> str:
+        field_type = type_name.lstrip('.')
+        field_type = field_type[len(self._proto_file.package):]
+        field_type = field_type.lstrip('.')
+
+        return field_type
+
     @staticmethod
     def file_to_import_name(file: FileDescriptorProto) -> str:
         return (
@@ -477,7 +484,7 @@ class CodeGenerator:
             path = '.'.join(field.type_name.split('.')[:-1])
 
             if self.is_local_type(path):
-                value_type = field.type_name.lstrip('.')
+                value_type = self.get_local_type(field.type_name)
             else:
                 value_type = self.resolve_field_import(field)
         else:
@@ -493,17 +500,14 @@ class CodeGenerator:
             self._uses_typing = True
         elif is_message_field(field):
             if self.is_local_type(field.type_name):
-                py_type = f"'{field.type_name.lstrip('.')}'"
+                py_type = f"'{self.get_local_type(field.type_name)}'"
             else:
                 py_type = self.resolve_field_import(field)
         elif is_enum_field(field):
             path = '.'.join(field.type_name.split('.')[:-1])
 
             if self.is_local_type(path):
-                field_type = field.type_name.lstrip('.')
-                field_type = field_type[len(self._proto_file.package):]
-                field_type = field_type.lstrip('.')
-                py_type = f"'{field_type}'"
+                py_type = f"'{self.get_local_type(field.type_name)}'"
             else:
                 py_type = self.resolve_field_import(field)
         elif is_group_field(field):
@@ -658,6 +662,9 @@ class CodeGenerator:
         w = self._buffer.write
 
         for nested_type in message.nested_type:
+            if nested_type.name.endswith('MapEntry'):
+                continue
+
             self.write_define_fields(nested_type, path=message.name + '.')
 
         if not message.field:
@@ -774,7 +781,7 @@ class CodeGenerator:
 
         return filename
 
-    def grpclib_imports(self, import_requests: dict) -> str:
+    def grpclib_imports(self, import_requests: Dict[str, FileDescriptorProto]) -> str:
         buffer = StringBuffer()
 
         buffer.write('import abc')
@@ -787,6 +794,7 @@ class CodeGenerator:
         buffer.nl()
 
         for file in import_requests.values():
+            debug(file.package)
             if self._index.base_package:
                 import_path = self._index.base_package.replace('/', '.') + '.' + self.file_to_import_name(file)
             else:

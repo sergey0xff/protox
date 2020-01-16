@@ -10,12 +10,7 @@ message Debug {
 
         Number number = 1;
     }
-//    Nested.Number number = 1;
+
+    Nested nested = 1;
+    map<int32, Nested.Number> nested_map = 2;
 }
-
-
-message Hello {
-
-}
-
-
