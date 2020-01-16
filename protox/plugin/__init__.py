@@ -5,13 +5,8 @@ import shlex
 import sys
 from collections import Counter
 from contextlib import contextmanager
-from pathlib import Path
 from typing import List, Dict, Set, Tuple
 
-# FIXME: delete before releasing the library
-sys.path.append(
-    str(Path(__file__).parent.parent.parent)
-)
 from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto, \
     ServiceDescriptorProto
 from protox.well_known_types.plugin import CodeGeneratorRequest, CodeGeneratorResponse
