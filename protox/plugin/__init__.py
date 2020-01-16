@@ -788,13 +788,16 @@ class CodeGenerator:
         buffer.write('import typing')
         buffer.nl()
 
+        if 'protox' in import_requests:
+            import_requests.pop('protox')
+            buffer.write('import protox')
+
         buffer.write('import grpclib.const')
         buffer.write('import grpclib.client')
         buffer.write('import grpclib.server')
         buffer.nl()
 
         for file in import_requests.values():
-            debug(file.package)
             if self._index.base_package:
                 import_path = self._index.base_package.replace('/', '.') + '.' + self.file_to_import_name(file)
             else:
@@ -826,6 +829,11 @@ class CodeGenerator:
 
     def grpc_type_to_py_name(self, grpc_type: str, import_requests: dict):
         file = self._index.proto_files[grpc_type]
+
+        if is_well_known_type_field(grpc_type):
+            import_requests['protox'] = file
+            return self.resolve_google_protobuf_import(grpc_type)
+
         import_requests[file.name] = file
 
         return (

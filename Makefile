@@ -21,4 +21,4 @@ protox-service:
 		--plugin=protoc-gen-protox=./protox/plugin/__init__.py\
 		--protox_out=. \
 		--protox_opt="--base-package-dir=app/protobuf --grpclib --with-dependencies" \
-		./protobuf_src/dev.proto
+		./protobuf_src/simple_service.proto
