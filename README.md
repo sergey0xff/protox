@@ -1,7 +1,7 @@
 # Protox
 Protobuf implementation for Python 3 that generates human-readable python code 
 
-# Quick example
+## Quick example
 ```python
 from enum import IntEnum
 from protox import Message
