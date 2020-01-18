@@ -4,13 +4,8 @@ package debug.nested;
 
 message Debug {
     message Nested {
-        enum Number {
-            A = 0;
+        message Three {
+            int32 x = 1;
         }
-
-        Number number = 1;
     }
-
-    Nested nested = 1;
-    map<int32, Nested.Number> nested_map = 2;
 }

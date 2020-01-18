@@ -664,7 +664,10 @@ class CodeGenerator:
             if is_map_message(nested_type):
                 continue
 
-            self.write_define_fields(nested_type, path=message.name + '.')
+            self.write_define_fields(
+                nested_type,
+                path=path + message.name + '.',
+            )
 
         if not message.field:
             return
