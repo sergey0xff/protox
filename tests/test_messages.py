@@ -387,3 +387,27 @@ def test_message_constructor_raises_value_error():
 
     with pytest.raises(ValueError):
         SimpleMessage(x="string")
+
+
+def test_is_initialized():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1)
+        y: int = Int32(number=2, required=True)
+
+    message = SimpleMessage()
+    assert not message.is_initialized()
+
+    message.y = 2
+    assert message.is_initialized()
+
+
+def test_is_empty():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1)
+
+    message = SimpleMessage()
+    assert message.is_empty()
+
+    message.x = 123
+    assert not message.is_empty()
+

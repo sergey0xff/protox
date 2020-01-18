@@ -386,8 +386,18 @@ class Message(metaclass=MessageMeta):
         except KeyError:
             return None
 
-    def empty(self) -> bool:
+    def is_empty(self) -> bool:
         return not bool(self._data)
+
+    def is_initialized(self) -> bool:
+        """
+        Checks if all required fields are set
+        """
+        for name, field in self._field_by_name.items():
+            if field.required and name not in self._data:
+                return False
+
+        return True
 
     def to_dict(self) -> dict:
         data = {}
@@ -442,7 +452,7 @@ class Message(metaclass=MessageMeta):
 
             for item in value:
                 if isinstance(item, Message):
-                    if item.empty():
+                    if item.is_empty():
                         buffer.append(f'{nested_indent}{{}}')
                     else:
                         buffer.append(f'{nested_indent}{{')
