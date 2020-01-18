@@ -399,6 +399,10 @@ class Message(metaclass=MessageMeta):
 
         return True
 
+    @classmethod
+    def list_fields(cls) -> List[str]:
+        return list(cls._field_by_name.keys())
+
     def to_dict(self) -> dict:
         data = {}
 

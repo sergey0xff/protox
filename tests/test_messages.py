@@ -411,3 +411,9 @@ def test_is_empty():
     message.x = 123
     assert not message.is_empty()
 
+
+def test_list_fields():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1)
+
+    assert SimpleMessage.list_fields() == ['x']
