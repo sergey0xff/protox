@@ -417,3 +417,17 @@ def test_list_fields():
         x: int = Int32(number=1)
 
     assert SimpleMessage.list_fields() == ['x']
+
+
+def test_equals():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1)
+
+    one = SimpleMessage(x=1)
+    two = SimpleMessage(x=2)
+    three = SimpleMessage(x=1)
+
+    assert one != two
+    assert not (one == two)
+    assert one == three
+    assert not (one != three)

@@ -423,6 +423,24 @@ class Message(metaclass=MessageMeta):
 
         return value
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            raise ValueError(
+                f'Cannot compare protocol message {type(self).__qualname__} '
+                f'to {type(self)}'
+            )
+
+        return self._data == other._data
+
+    def __ne__(self, other):
+        if not isinstance(other, type(self)):
+            raise ValueError(
+                f'Cannot compare protocol message {type(self).__qualname__} '
+                f'to {type(self)}'
+            )
+
+        return not self == other
+
     def __str__(self):
         return self.format()
 
