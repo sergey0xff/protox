@@ -1,30 +1,7 @@
-# Protobuf for humans
-protox is a protobuf implementation for Python 3 that generates human-readable python code 
+# Protox
+Protobuf implementation for Python 3 that generates human-readable python code 
 
-## Disclaimer
-It is alpha version yet fully working binary protocol
-
-## Features
-* Human-readable python3.6+ generated code with type hinting
-* It is easy to use the library without code generation
-* Messages implemented in more pythonic way: to_bytes() instead of SerializeToString()
-* Enums are just enums python enums
-* Useful helper features like to_dict()
-* You can choose the python module to put generated protobufs to
-
-## Coming soon features
-* Compiler
-
-## Difference with google's protobuf implementation
-Fields encoded/decoded exactly as google's implementation does
-Difference is only in how messages behave
-* Not set fields are None, not zero-values.
-Makes no sense in setting zero-values for fields in Python
-* Some of the google's methods like SerializeToString() were changed to more pythonic alternatives like dump(s)/load(s)
-* Enums are just python int enums. 
-Google's implementation stores enum values as constants of parent objects which is also makes no sense in python.
-
-## Describe a simple message by hand and send it another python process
+# Quick example
 ```python
 from enum import IntEnum
 from protox import Message
@@ -40,8 +17,48 @@ class User(Message):
     status: Status = EnumField(Status, number=3, required=True, default=Status.USER)
 ```
 
-Or generate it from a .proto file
+## Code generation
+Code generator implemented as a protoc plugin so you have to install it first:
 
+#### Install protoc (Ubuntu)
 ```bash
-python3.7 -m protox --src=protobuf_src --python-out=protobuf
+sudo apt install protobuf-compiler
 ```
+
+#### Install protoc (Mac OS)
+```bash
+brew install protobuf
+```
+
+#### Install protox
+```bash
+python3 -m pip install protox
+````
+
+#### Generate messages
+```bash
+protoc \
+    --proto_path=protobuf_src \
+    --protox_out=. \
+    ./protobuf_src/user.proto
+```
+
+## Features
+* Human-readable python3.6+ generated code with type hinting
+* It is easy to use the library without code generation
+* Messages implemented in more pythonic way: to_bytes() instead of SerializeToString()
+* Enums are just enums python enums
+* Useful helper features like to_dict()
+
+## Code generator features
+* Root python package with properly resolved imports
+* Compile protobuf file with or without dependencies
+* [grpclib](https://github.com/vmagamedov/grpclib/) support out of the box
+
+## Difference with google's protobuf implementation
+Fields encoded/decoded exactly as google's implementation does
+
+Difference is only in the way messages behave:
+* Not set fields are None, not zero-values
+* Methods like SerializeToString() were changed to more pythonic alternatives like to_bytes() / from_bytes()
+* Enums are just python int enums 
