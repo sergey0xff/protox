@@ -1,9 +1,7 @@
+import typing
 from enum import IntEnum
 
-from typing import List, Optional
-
 import protox
-from protox import Message, fields
 from protox.well_known_types.any import Any
 from protox.well_known_types.source_context import SourceContext
 
@@ -13,67 +11,35 @@ class Syntax(IntEnum):
     SYNTAX_PROTO3 = 1
 
 
-class Option(Message):
-    name: Optional[str] = fields.String(number=1)
-    value: Optional[Any] = Any.as_field(number=2)
+class Type(protox.Message):
+    name: typing.Optional[str]
+    fields: typing.List['Field']
+    oneofs: typing.List[str]
+    options: typing.List['Option']
+    source_context: typing.Optional[SourceContext]
+    syntax: typing.Optional[Syntax]
 
     def __init__(
         self,
         *,
-        name: str = None,
-        value: Any = None,
+        name: typing.Optional[str] = None,
+        fields: typing.List['Field'] = None,
+        oneofs: typing.List[str] = None,
+        options: typing.List['Option'] = None,
+        source_context: typing.Optional[SourceContext] = None,
+        syntax: typing.Optional[Syntax] = None,
     ):
         super().__init__(
             name=name,
-            value=value,
-        )
-
-
-class EnumValue(Message):
-    name: Optional[str] = fields.String(number=1)
-    number: Optional[int] = fields.Int32(number=2)
-    options: List[Option] = Option.as_repeated(number=3)
-
-    def __init__(
-        self,
-        *,
-        name: str = None,
-        number: int = None,
-        options: List[Option] = None,
-    ):
-        super().__init__(
-            name=name,
-            number=number,
-            options=options,
-        )
-
-
-class Enum(Message):
-    name: Optional[str] = fields.String(number=1)
-    enumvalue: List[EnumValue] = EnumValue.as_repeated(number=2)
-    options: List[Option] = Option.as_repeated(number=3)
-    source_context: Optional[SourceContext] = SourceContext.as_field(number=4)
-    syntax: Optional[Syntax] = fields.EnumField(Syntax, number=5)
-
-    def __init__(
-        self,
-        *,
-        name: str = None,
-        enumvalue: List[EnumValue] = None,
-        options: List[Option] = None,
-        source_context: SourceContext = None,
-        syntax: Syntax = None,
-    ):
-        super().__init__(
-            name=name,
-            enumvalue=enumvalue,
+            fields=fields,
+            oneofs=oneofs,
             options=options,
             source_context=source_context,
             syntax=syntax,
         )
 
 
-class Field(Message):
+class Field(protox.Message):
     class Kind(IntEnum):
         TYPE_UNKNOWN = 0
         TYPE_DOUBLE = 1
@@ -101,30 +67,30 @@ class Field(Message):
         CARDINALITY_REQUIRED = 2
         CARDINALITY_REPEATED = 3
 
-    kind: Optional[Kind] = fields.EnumField(Kind, number=1)
-    cardinality: Optional[Cardinality] = fields.EnumField(Cardinality, number=2)
-    number: Optional[int] = fields.Int32(number=3)
-    name: Optional[str] = fields.String(number=4)
-    type_url: Optional[str] = fields.String(number=6)
-    oneof_index: Optional[int] = fields.Int32(number=7)
-    packed: Optional[int] = fields.Bool(number=8)
-    options: List[Option] = Option.as_repeated(number=9)
-    json_name: Optional[str] = fields.String(number=10)
-    default_value: Optional[str] = fields.String(number=11)
+    kind: typing.Optional['Field.Kind']
+    cardinality: typing.Optional['Field.Cardinality']
+    number: typing.Optional[int]
+    name: typing.Optional[str]
+    type_url: typing.Optional[str]
+    oneof_index: typing.Optional[int]
+    packed: typing.Optional[bool]
+    options: typing.List['Option']
+    json_name: typing.Optional[str]
+    default_value: typing.Optional[str]
 
     def __init__(
         self,
         *,
-        kind: Kind = None,
-        cardinality: Cardinality = None,
-        number: int = None,
-        name: str = None,
-        type_url: str = None,
-        oneof_index: int = None,
-        packed: int = None,
-        options: List[Option] = None,
-        json_name: str = None,
-        default_value: str = None,
+        kind: typing.Optional['Field.Kind'] = None,
+        cardinality: typing.Optional['Field.Cardinality'] = None,
+        number: typing.Optional[int] = None,
+        name: typing.Optional[str] = None,
+        type_url: typing.Optional[str] = None,
+        oneof_index: typing.Optional[int] = None,
+        packed: typing.Optional[bool] = None,
+        options: typing.List['Option'] = None,
+        json_name: typing.Optional[str] = None,
+        default_value: typing.Optional[str] = None,
     ):
         super().__init__(
             kind=kind,
@@ -140,29 +106,160 @@ class Field(Message):
         )
 
 
-class Type(Message):
-    name: Optional[str] = protox.String(number=1)
-    fields: List[Field] = Field.as_repeated(number=2)
-    oneofs: List[str] = protox.String.as_repeated(number=3)
-    options: List[Option] = Option.as_repeated(number=4)
-    source_context: Optional[SourceContext] = SourceContext.as_field(number=5)
-    syntax: Optional[Syntax] = protox.EnumField(Syntax, number=6)
+class Enum(protox.Message):
+    name: typing.Optional[str]
+    enumvalue: typing.List['EnumValue']
+    options: typing.List['Option']
+    source_context: typing.Optional[SourceContext]
+    syntax: typing.Optional[Syntax]
 
     def __init__(
         self,
         *,
-        name: str = None,
-        fields: List[Field] = None,
-        oneofs: List[str] = None,
-        options: List[Option] = None,
-        source_context: SourceContext = None,
-        syntax: Syntax = None,
+        name: typing.Optional[str] = None,
+        enumvalue: typing.List['EnumValue'] = None,
+        options: typing.List['Option'] = None,
+        source_context: typing.Optional[SourceContext] = None,
+        syntax: typing.Optional[Syntax] = None,
     ):
         super().__init__(
             name=name,
-            fields=fields,
-            oneofs=oneofs,
+            enumvalue=enumvalue,
             options=options,
             source_context=source_context,
             syntax=syntax,
         )
+
+
+class EnumValue(protox.Message):
+    name: typing.Optional[str]
+    number: typing.Optional[int]
+    options: typing.List['Option']
+
+    def __init__(
+        self,
+        *,
+        name: typing.Optional[str] = None,
+        number: typing.Optional[int] = None,
+        options: typing.List['Option'] = None,
+    ):
+        super().__init__(
+            name=name,
+            number=number,
+            options=options,
+        )
+
+
+class Option(protox.Message):
+    name: typing.Optional[str]
+    value: typing.Optional[Any]
+
+    def __init__(
+        self,
+        *,
+        name: typing.Optional[str] = None,
+        value: typing.Optional[Any] = None,
+    ):
+        super().__init__(
+            name=name,
+            value=value,
+        )
+
+
+protox.define_fields(
+    Type,
+    name=protox.String(
+        number=1, required=False
+    ),
+    fields=Field.as_repeated(
+        number=2
+    ),
+    oneofs=protox.String.as_repeated(
+        number=3
+    ),
+    options=Option.as_repeated(
+        number=4
+    ),
+    source_context=SourceContext.as_field(
+        number=5, required=False
+    ),
+    syntax=protox.EnumField(
+        number=6, py_enum=Syntax, required=False
+    ),
+)
+
+protox.define_fields(
+    Field,
+    kind=protox.EnumField(
+        number=1, py_enum=Field.Kind, required=False
+    ),
+    cardinality=protox.EnumField(
+        number=2, py_enum=Field.Cardinality, required=False
+    ),
+    number=protox.Int32(
+        number=3, required=False
+    ),
+    name=protox.String(
+        number=4, required=False
+    ),
+    type_url=protox.String(
+        number=6, required=False
+    ),
+    oneof_index=protox.Int32(
+        number=7, required=False
+    ),
+    packed=protox.Bool(
+        number=8, required=False
+    ),
+    options=Option.as_repeated(
+        number=9
+    ),
+    json_name=protox.String(
+        number=10, required=False
+    ),
+    default_value=protox.String(
+        number=11, required=False
+    ),
+)
+
+protox.define_fields(
+    Enum,
+    name=protox.String(
+        number=1, required=False
+    ),
+    enumvalue=EnumValue.as_repeated(
+        number=2
+    ),
+    options=Option.as_repeated(
+        number=3
+    ),
+    source_context=SourceContext.as_field(
+        number=4, required=False
+    ),
+    syntax=protox.EnumField(
+        number=5, py_enum=Syntax, required=False
+    ),
+)
+
+protox.define_fields(
+    EnumValue,
+    name=protox.String(
+        number=1, required=False
+    ),
+    number=protox.Int32(
+        number=2, required=False
+    ),
+    options=Option.as_repeated(
+        number=3
+    ),
+)
+
+protox.define_fields(
+    Option,
+    name=protox.String(
+        number=1, required=False
+    ),
+    value=Any.as_field(
+        number=2, required=False
+    ),
+)

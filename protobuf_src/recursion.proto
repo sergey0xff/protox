@@ -1,7 +1,0 @@
-syntax = "proto2";
-
-message Node {
-    required int32 value = 1;
-    optional Node left = 2;
-    optional Node right = 3;
-}

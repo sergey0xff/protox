@@ -1,39 +1,184 @@
-from typing import Optional
+import typing
 
-from protox import Message, fields
-
-
-class DoubleValue(Message):
-    value: Optional[float] = fields.Double(number=1)
+import protox
 
 
-class FloatValue(Message):
-    value: Optional[float] = fields.Float(number=1)
+class DoubleValue(protox.Message):
+    value: typing.Optional[float]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[float] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class Int64Value(Message):
-    value: Optional[int] = fields.Int64(number=1)
+class FloatValue(protox.Message):
+    value: typing.Optional[float]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[float] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class UInt64Value(Message):
-    value: Optional[int] = fields.UInt64(number=1)
+class Int64Value(protox.Message):
+    value: typing.Optional[int]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[int] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class Int32Value(Message):
-    value: Optional[int] = fields.Int32(number=1)
+class UInt64Value(protox.Message):
+    value: typing.Optional[int]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[int] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class UInt32Value(Message):
-    value: Optional[int] = fields.UInt32(number=1)
+class Int32Value(protox.Message):
+    value: typing.Optional[int]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[int] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class BoolValue(Message):
-    value: Optional[bool] = fields.Bool(number=1)
+class UInt32Value(protox.Message):
+    value: typing.Optional[int]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[int] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class StringValue(Message):
-    value: Optional[str] = fields.String(number=1)
+class BoolValue(protox.Message):
+    value: typing.Optional[bool]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[bool] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
 
 
-class BytesValue(Message):
-    value: Optional[bytes] = fields.Bytes(number=1)
+class StringValue(protox.Message):
+    value: typing.Optional[str]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[str] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
+
+
+class BytesValue(protox.Message):
+    value: typing.Optional[bytes]
+
+    def __init__(
+        self,
+        *,
+        value: typing.Optional[bytes] = None,
+    ):
+        super().__init__(
+            value=value,
+        )
+
+
+protox.define_fields(
+    DoubleValue,
+    value=protox.Double(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    FloatValue,
+    value=protox.Float(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    Int64Value,
+    value=protox.Int64(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    UInt64Value,
+    value=protox.UInt64(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    Int32Value,
+    value=protox.Int32(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    UInt32Value,
+    value=protox.UInt32(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    BoolValue,
+    value=protox.Bool(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    StringValue,
+    value=protox.String(
+        number=1, required=False
+    ),
+)
+
+protox.define_fields(
+    BytesValue,
+    value=protox.Bytes(
+        number=1, required=False
+    ),
+)

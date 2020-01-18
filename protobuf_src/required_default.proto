@@ -1,5 +1,0 @@
-syntax = "proto2";
-
-message RequiredDefault {
-    required int32 x = 1 [default = 123];
-}

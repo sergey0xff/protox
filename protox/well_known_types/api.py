@@ -84,7 +84,7 @@ class Mixin(protox.Message):
 protox.define_fields(
     Api,
     name=protox.String(
-        number=1
+        number=1, required=False
     ),
     methods=Method.as_repeated(
         number=2
@@ -93,50 +93,50 @@ protox.define_fields(
         number=3
     ),
     version=protox.String(
-        number=4
+        number=4, required=False
     ),
     source_context=protox.SourceContext.as_field(
-        number=5
+        number=5, required=False
     ),
     mixins=Mixin.as_repeated(
         number=6
     ),
     syntax=protox.EnumField(
-        number=7, py_enum=protox.Syntax
+        number=7, py_enum=protox.Syntax, required=False
     ),
 )
 
 protox.define_fields(
     Method,
     name=protox.String(
-        number=1
+        number=1, required=False
     ),
     request_type_url=protox.String(
-        number=2
+        number=2, required=False
     ),
     request_streaming=protox.Bool(
-        number=3
+        number=3, required=False
     ),
     response_type_url=protox.String(
-        number=4
+        number=4, required=False
     ),
     response_streaming=protox.Bool(
-        number=5
+        number=5, required=False
     ),
     options=protox.Option.as_repeated(
         number=6
     ),
     syntax=protox.EnumField(
-        number=7, py_enum=protox.Syntax
+        number=7, py_enum=protox.Syntax, required=False
     ),
 )
 
 protox.define_fields(
     Mixin,
     name=protox.String(
-        number=1
+        number=1, required=False
     ),
     root=protox.String(
-        number=2
+        number=2, required=False
     ),
 )

@@ -733,6 +733,29 @@ protox.define_fields(
 )
 
 protox.define_fields(
+    DescriptorProto.ExtensionRange,
+    start=protox.Int32(
+        number=1, required=False
+    ),
+    end=protox.Int32(
+        number=2, required=False
+    ),
+    options=ExtensionRangeOptions.as_field(
+        number=3, required=False
+    ),
+)
+
+protox.define_fields(
+    DescriptorProto.ReservedRange,
+    start=protox.Int32(
+        number=1, required=False
+    ),
+    end=protox.Int32(
+        number=2, required=False
+    ),
+)
+
+protox.define_fields(
     DescriptorProto,
     name=protox.String(
         number=1, required=False
@@ -763,29 +786,6 @@ protox.define_fields(
     ),
     reserved_name=protox.String.as_repeated(
         number=10
-    ),
-)
-
-protox.define_fields(
-    DescriptorProto.ExtensionRange,
-    start=protox.Int32(
-        number=1, required=False
-    ),
-    end=protox.Int32(
-        number=2, required=False
-    ),
-    options=ExtensionRangeOptions.as_field(
-        number=3, required=False
-    ),
-)
-
-protox.define_fields(
-    DescriptorProto.ReservedRange,
-    start=protox.Int32(
-        number=1, required=False
-    ),
-    end=protox.Int32(
-        number=2, required=False
     ),
 )
 
@@ -841,6 +841,16 @@ protox.define_fields(
 )
 
 protox.define_fields(
+    EnumDescriptorProto.EnumReservedRange,
+    start=protox.Int32(
+        number=1, required=False
+    ),
+    end=protox.Int32(
+        number=2, required=False
+    ),
+)
+
+protox.define_fields(
     EnumDescriptorProto,
     name=protox.String(
         number=1, required=False
@@ -869,16 +879,6 @@ protox.define_fields(
     ),
     options=EnumValueOptions.as_field(
         number=3, required=False
-    ),
-)
-
-protox.define_fields(
-    EnumDescriptorProto.EnumReservedRange,
-    start=protox.Int32(
-        number=1, required=False
-    ),
-    end=protox.Int32(
-        number=2, required=False
     ),
 )
 
@@ -1074,11 +1074,20 @@ protox.define_fields(
         number=33, default=False, required=False
     ),
     idempotency_level=protox.EnumField(
-        number=34, py_enum=MethodOptions.IdempotencyLevel, default=MethodOptions.IdempotencyLevel.IDEMPOTENCY_UNKNOWN,
-        required=False
+        number=34, py_enum=MethodOptions.IdempotencyLevel, default=MethodOptions.IdempotencyLevel.IDEMPOTENCY_UNKNOWN, required=False
     ),
     uninterpreted_option=UninterpretedOption.as_repeated(
         number=999
+    ),
+)
+
+protox.define_fields(
+    UninterpretedOption.NamePart,
+    name_part=protox.String(
+        number=1, required=True
+    ),
+    is_extension=protox.Bool(
+        number=2, required=True
     ),
 )
 
@@ -1108,23 +1117,6 @@ protox.define_fields(
 )
 
 protox.define_fields(
-    UninterpretedOption.NamePart,
-    name_part=protox.String(
-        number=1, required=True
-    ),
-    is_extension=protox.Bool(
-        number=2, required=True
-    ),
-)
-
-protox.define_fields(
-    SourceCodeInfo,
-    location=SourceCodeInfo.Location.as_repeated(
-        number=1
-    ),
-)
-
-protox.define_fields(
     SourceCodeInfo.Location,
     path=protox.Int32.as_repeated(
         number=1, packed=True
@@ -1144,8 +1136,8 @@ protox.define_fields(
 )
 
 protox.define_fields(
-    GeneratedCodeInfo,
-    annotation=GeneratedCodeInfo.Annotation.as_repeated(
+    SourceCodeInfo,
+    location=SourceCodeInfo.Location.as_repeated(
         number=1
     ),
 )
@@ -1163,5 +1155,12 @@ protox.define_fields(
     ),
     end=protox.Int32(
         number=4, required=False
+    ),
+)
+
+protox.define_fields(
+    GeneratedCodeInfo,
+    annotation=GeneratedCodeInfo.Annotation.as_repeated(
+        number=1
     ),
 )

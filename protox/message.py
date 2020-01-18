@@ -9,6 +9,11 @@ from protox.fields import Field, OneOf, Repeated, MessageField, MapField
 from protox.validated_dict import ValidatedDict
 from protox.validated_list import ValidatedList
 
+__all__ = [
+    'Message',
+    'define_fields',
+]
+
 
 class FieldGetter:
     def __init__(self, key, default):

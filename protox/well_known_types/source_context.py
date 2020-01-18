@@ -1,16 +1,24 @@
-from typing import Optional
+import typing
 
-from protox import Message, fields
+import protox
 
 
-class SourceContext(Message):
-    file_name: Optional[str] = fields.String(number=1)
+class SourceContext(protox.Message):
+    file_name: typing.Optional[str]
 
     def __init__(
         self,
         *,
-        file_name: str = None,
+        file_name: typing.Optional[str] = None,
     ):
         super().__init__(
-            file_name=file_name
+            file_name=file_name,
         )
+
+
+protox.define_fields(
+    SourceContext,
+    file_name=protox.String(
+        number=1, required=False
+    ),
+)
