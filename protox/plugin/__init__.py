@@ -59,8 +59,6 @@ reserved_names = [
     'typing',
     'abc',
 
-    # FIXME: `enum` probably not used
-    'enum',
     'IntEnum',
 ]
 
