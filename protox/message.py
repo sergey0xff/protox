@@ -504,3 +504,11 @@ class Message(metaclass=MessageMeta):
             buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {value_display}')
         else:
             buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {value!r}')
+
+    # The following methods provided for libraries like grpclib to simplify end-user experience
+    def SerializeToString(self):
+        return self.to_bytes()
+
+    @classmethod
+    def FromString(cls, data):
+        return cls.from_bytes(data)
