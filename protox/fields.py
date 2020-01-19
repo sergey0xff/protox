@@ -199,8 +199,6 @@ class Repeated(Field):
     def __init__(self, of_type: Type, *, number: int, packed: bool = False):
         from .message import Message
 
-        # FIXME: prohibit repeated maps because it makes not sense
-
         if issubclass(of_type, Message):
             if packed:
                 raise FieldValidationError(

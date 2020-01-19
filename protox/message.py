@@ -444,7 +444,9 @@ class Message(metaclass=MessageMeta):
     def __str__(self):
         return self.format()
 
-    def format(self, buffer: list = None, indent_level=0, indent='  ') -> str:
+    _format_indent = ' ' * 4
+
+    def format(self, buffer: list = None, indent_level=0) -> str:
         buffer = buffer or []
 
         if indent_level == 0:
@@ -453,57 +455,129 @@ class Message(metaclass=MessageMeta):
         indent_level += 1
 
         for key, value in self._data.items():
-            self._format(key, value, buffer, indent_level, indent)
+            self._format(key, value, buffer, indent_level)
 
         return '\n'.join(buffer)
 
-    def _format(self, field_name, value, buffer: list, indent_level, indent):
-        # FIXME: refactor _format
-        #  write a _format_...() function for each case
-        local_indent = indent * indent_level
+    def _format_nested_message(
+        self,
+        buffer: list,
+        name: str,
+        value: 'Message',
+        indent_level: int,
+    ):
+        indent = self._format_indent * indent_level
+        buffer.append(f'{indent}{name}: {type(value).__name__} = {{')
+        value.format(buffer, indent_level)
+        buffer.append(f'{indent}}}')
+
+    def _format_enum(
+        self,
+        buffer: list,
+        name: str,
+        value: IntEnum,
+        indent_level: int,
+    ):
+        indent = self._format_indent * indent_level
+        buffer.append(f'{indent}{name + " =" if name else ""} {str(value)}')
+
+    def _format_repeated(
+        self,
+        buffer: list,
+        name: str,
+        value: list,
+        indent_level: int,
+    ):
+        indent = self._format_indent * indent_level
+        buffer.append(f'{indent}{name}: {self._field_by_name[name].of_type.__name__} = [')
+        nested_indent = indent + self._format_indent
+
+        for item in value:
+            if isinstance(item, Message):
+                if item.is_empty():
+                    buffer.append(f'{nested_indent}{{}}')
+                else:
+                    buffer.append(f'{nested_indent}{{')
+                    item.format(buffer, indent_level + 1)
+                    buffer.append(f'{nested_indent}}}')
+            else:
+                self._format('', item, buffer, indent_level + 1)
+
+        buffer.append(f'{indent}]')
+
+    def _format_map(
+        self,
+        buffer: list,
+        name: str,
+        value: dict,
+        indent_level: int,
+    ):
+        """
+        Maps will be implemented when Message.format() will be refactored
+        """
+        indent = self._format_indent * indent_level
+        buffer.append(f'{indent}{name} = {value}')
+
+    def _format_bytes(
+        self,
+        buffer: list,
+        name: str,
+        value: bytes,
+        indent_level: int,
+    ):
+        indent = self._format_indent * indent_level
+        first_n_elements = 15
+
+        if len(value) > first_n_elements:
+            value_display = f"{value[:first_n_elements]} ... {len(value) - first_n_elements:_} bytes more"
+        else:
+            value_display = value
+
+        buffer.append(f'{indent}{name + " =" if name else ""} {value_display}')
+
+    def _format_string(
+        self,
+        buffer: list,
+        name: str,
+        value: str,
+        indent_level: int,
+    ):
+        indent = self._format_indent * indent_level
+        first_n_elements = 50
+
+        if len(value) > first_n_elements:
+            value_display = f"{value[:first_n_elements]!r} ... {len(value) - first_n_elements:_} characters more"
+        else:
+            value_display = repr(value)
+
+        buffer.append(f'{indent}{name + " =" if name else ""} {value_display}')
+
+    def _format(self, name: str, value, buffer: list, indent_level: int):
+        type_to_formatter = {
+            ValidatedList: self._format_repeated,
+            ValidatedDict: self._format_map,
+            bytes: self._format_bytes,
+            str: self._format_string,
+        }
+        formatter = None
 
         if isinstance(value, Message):
-            buffer.append(f'{local_indent}{field_name}: {type(value).__name__} = {{')
-            value.format(buffer, indent_level, indent)
-            buffer.append(f'{local_indent}}}')
+            formatter = self._format_nested_message
         elif isinstance(value, IntEnum):
-            buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {str(value)}[{value.value}]')
-        elif isinstance(value, ValidatedList):
-            buffer.append(f'{local_indent}{field_name}: {self._field_by_name[field_name].of_type.__name__} = [')
-            nested_indent = local_indent + indent
+            formatter = self._format_enum
+        elif type(value) in type_to_formatter:
+            formatter = type_to_formatter[type(value)]
 
-            for item in value:
-                if isinstance(item, Message):
-                    if item.is_empty():
-                        buffer.append(f'{nested_indent}{{}}')
-                    else:
-                        buffer.append(f'{nested_indent}{{')
-                        item.format(buffer, indent_level + 1)
-                        buffer.append(f'{nested_indent}}}')
-                else:
-                    self._format('', item, buffer, indent_level + 1, indent)
-
-            buffer.append(f'{local_indent}]')
-        elif isinstance(value, bytes):
-            first_n_elements = 15
-
-            if len(value) > first_n_elements:
-                value_display = f"{value[:first_n_elements]} ... {len(value) - first_n_elements:_} bytes more"
-            else:
-                value_display = value
-
-            buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {value_display}')
-        elif isinstance(value, str):
-            first_n_elements = 50
-
-            if len(value) > first_n_elements:
-                value_display = f"{value[:first_n_elements]!r} ... {len(value) - first_n_elements:_} characters more"
-            else:
-                value_display = repr(value)
-
-            buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {value_display}')
+        if formatter:
+            formatter(
+                buffer,
+                name,
+                value,
+                indent_level,
+            )
         else:
-            buffer.append(f'{local_indent}{field_name + " =" if field_name else ""} {value!r}')
+            indent = self._format_indent * indent_level
+            buffer.append(f'{indent}{name + " =" if name else ""} {value!r}')
 
     # The following methods provided for libraries like grpclib to simplify end-user experience
     def SerializeToString(self):
