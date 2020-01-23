@@ -56,9 +56,10 @@ protoc \
 * [grpclib](https://github.com/vmagamedov/grpclib/) support out of the box
 
 ## Difference with google's protobuf implementation
-Fields encoded/decoded exactly as google's implementation does
+Binary protocol works exactly as google's implementation does.
 
-Difference is only in the way messages behave:
-* Not set fields are None, not zero-values
+The difference is in the way messages behave:
+* Fields that were not explicitly set are None rather than zero-values
 * Methods like SerializeToString() were changed to more pythonic alternatives like to_bytes() / from_bytes()
-* Enums are just python int enums 
+* Enums are just python int enums
+
