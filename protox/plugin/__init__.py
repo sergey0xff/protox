@@ -1,191 +1,15 @@
 #!/usr/bin/env python3
 import argparse
-import re
 import shlex
 import sys
-from collections import Counter
-from contextlib import contextmanager
-from typing import List, Dict, Set, Tuple
+from typing import Dict, Set, Tuple
 
-from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto, \
-    ServiceDescriptorProto
+from protox import FieldDescriptorProto, DescriptorProto, FileDescriptorProto, EnumDescriptorProto
+from protox.plugin.common import RESERVED_NAMES, PROTOBUF_FILE_POSTFIX, fix_redundant_newlines, is_empty_message, \
+    collect_one_of, pb_to_py_type, pb_to_protox_type, pythonize_default_value, StringBuffer, is_optional, is_repeated, \
+    is_message_field, is_enum_field, is_group_field, is_map_message, is_well_known_type_field, FieldMangler
+from protox.plugin.grpclib_generator import GrpclibCodeGenerator
 from protox.well_known_types.plugin import CodeGeneratorRequest, CodeGeneratorResponse
-
-reserved_names = [
-    'False',
-    'None',
-    'True',
-    'and',
-    'as',
-    'assert',
-    'async',
-    'await',
-    'break',
-    'class',
-    'continue',
-    'def',
-    'del',
-    'elif',
-    'else',
-    'except',
-    'finally',
-    'for',
-    'from',
-    'global',
-    'if',
-    'import',
-    'in',
-    'is',
-    'lambda',
-    'nonlocal',
-    'not',
-    'or',
-    'pass',
-    'raise',
-    'return',
-    'try',
-    'while',
-    'with',
-    'yield',
-
-    # types,
-    'protox',
-    'grpclib',
-    'int',
-    'float',
-    'bool',
-    'str',
-    'bytes',
-    'typing',
-    'abc',
-
-    'IntEnum',
-]
-
-protobuf_file_postfix = '_pb'
-grpclib_file_postfix = '_grpclib'
-
-
-def pythonize_name(name: str) -> str:
-    if name in reserved_names:
-        return name + '_'
-
-    return name
-
-
-def to_snake_case(name: str) -> str:
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
-
-
-def fix_redundant_newlines(text: str) -> str:
-    return re.sub(r'\n{3,}', '\n\n\n', text)
-
-
-def is_empty_message(message: DescriptorProto) -> bool:
-    return not (
-        message.nested_type or
-        message.field or
-        message.enum_type
-    )
-
-
-def collect_one_of(message: DescriptorProto) -> Dict[str, List[str]]:
-    one_ofs = {}
-    one_of_by_index = []
-
-    for one_of in message.oneof_decl:
-        lst = []
-        one_ofs[one_of.name] = lst
-        one_of_by_index.append(lst)
-
-    for field in message.field:
-        if field.has_field('oneof_index'):
-            one_of_by_index[field.oneof_index].append(field.name)
-
-    return one_ofs
-
-
-def pb_to_py_type(pb_type: FieldDescriptorProto.Type) -> str:
-    fd = FieldDescriptorProto.Type
-
-    return {
-        fd.TYPE_DOUBLE: 'float',
-        fd.TYPE_FLOAT: 'float',
-
-        fd.TYPE_INT64: 'int',
-        fd.TYPE_UINT64: 'int',
-        fd.TYPE_INT32: 'int',
-        fd.TYPE_UINT32: 'int',
-        fd.TYPE_FIXED64: 'int',
-        fd.TYPE_FIXED32: 'int',
-        fd.TYPE_SFIXED32: 'int',
-        fd.TYPE_SFIXED64: 'int',
-        fd.TYPE_SINT32: 'int',
-        fd.TYPE_SINT64: 'int',
-
-        fd.TYPE_STRING: 'str',
-        fd.TYPE_BYTES: 'bytes',
-
-        fd.TYPE_BOOL: 'bool',
-        fd.TYPE_ENUM: 'enum.IntEnum',
-    }[pb_type]
-
-
-def pb_to_protox_type(pb_type: FieldDescriptorProto.Type) -> str:
-    fd = FieldDescriptorProto.Type
-
-    return {
-        fd.TYPE_DOUBLE: 'Double',
-        fd.TYPE_FLOAT: 'Float',
-
-        fd.TYPE_INT64: 'Int64',
-        fd.TYPE_UINT64: 'UInt64',
-        fd.TYPE_INT32: 'Int32',
-        fd.TYPE_UINT32: 'UInt32',
-        fd.TYPE_FIXED64: 'Fixed64',
-        fd.TYPE_FIXED32: 'Fixed32',
-        fd.TYPE_SFIXED32: 'SFixed32',
-        fd.TYPE_SFIXED64: 'SFixed64',
-        fd.TYPE_SINT32: 'SInt32',
-        fd.TYPE_SINT64: 'SInt64',
-
-        fd.TYPE_STRING: 'String',
-        fd.TYPE_BYTES: 'Bytes',
-
-        fd.TYPE_BOOL: 'Bool',
-        fd.TYPE_ENUM: 'EnumField',
-    }[pb_type]
-
-
-def pythonize_default_value(default_value: str) -> str:
-    return {
-        'true': 'True',
-        'false': 'False',
-    }.get(default_value, default_value)
-
-
-def debug(*args):
-    sys.stderr.write(''.join(map(str, args)) + '\n')
-
-
-def parse_base_package(parameter: str) -> str:
-    parts = parameter.split(',')
-
-    for part in parts:
-        part = part.strip()
-
-        if part.startswith('base_package'):
-            try:
-                _, value = part.split('=')
-            except ValueError:
-                raise Exception(
-                    f'Could not parse option: {part}'
-                )
-
-            return value.strip()
-
-    return ''
 
 
 class Index:
@@ -242,124 +66,31 @@ class Index:
         self.proto_files[prefix + enum.name] = proto_file
 
 
-class StringBuffer:
-    def __init__(self):
-        self._buffer = []
-        self._indent = 0
-
-    @contextmanager
-    def indent(self):
-        self._indent += 1
-        yield
-        self._indent -= 1
-
-    def write(self, *args: str):
-        self._buffer.append(' ' * 4 * self._indent)
-
-        for x in args:
-            self._buffer.append(x)
-
-        self._buffer.append('\n')
-
-    def nl(self, n=1):
-        self._buffer.append('\n' * n)
-
-    def read(self) -> str:
-        return ''.join(self._buffer)
-
-
-def is_optional(field: FieldDescriptorProto) -> bool:
-    return field.label == FieldDescriptorProto.Label.LABEL_OPTIONAL
-
-
-def is_required(field: FieldDescriptorProto) -> bool:
-    return field.label == FieldDescriptorProto.Label.LABEL_REQUIRED
-
-
-def is_repeated(field: FieldDescriptorProto) -> bool:
-    return field.label == FieldDescriptorProto.Label.LABEL_REPEATED
-
-
-def is_message_field(field: FieldDescriptorProto) -> bool:
-    return field.type == FieldDescriptorProto.Type.TYPE_MESSAGE
-
-
-def is_enum_field(field: FieldDescriptorProto) -> bool:
-    return field.type == FieldDescriptorProto.Type.TYPE_ENUM
-
-
-def is_group_field(field: FieldDescriptorProto) -> bool:
-    return field.type == FieldDescriptorProto.Type.TYPE_GROUP
-
-
-def is_map_message(message: DescriptorProto) -> bool:
-    try:
-        return bool(message.options.map_entry)
-    except AttributeError:
-        return False
-
-
-def is_well_known_type_field(type_name: str) -> bool:
-    return type_name.startswith('.google.protobuf')
-
-
-class FieldMangler:
-    def __init__(self, message: DescriptorProto, snake_case_flag: bool):
-        # original field names
-        self._message_fields = set(
-            x.name for x in message.field
-        )
-        self._name_counter = Counter()
-        self._snake_case_flag = snake_case_flag
-
-        # maps original field names to mangled ones
-        self._mangled_names: Dict[str, str] = {}
-
-        for name in self._message_fields:
-            self._process_name(name)
-
-    def _mangle_name(self, name: str) -> str:
-        self._name_counter[name] += 1
-
-        while f'{name}_{self._name_counter[name]}' in self._message_fields:
-            self._name_counter[name] += 1
-
-        return f'{name}_{self._name_counter[name]}'
-
-    def _process_name(self, name: str):
-        if self._snake_case_flag:
-            py_name = to_snake_case(name)
-        else:
-            py_name = name
-
-        if (
-            py_name in reserved_names
-            or
-            py_name != name and py_name in self._message_fields
-        ):
-            py_name = self._mangle_name(py_name)
-
-        self._mangled_names[name] = py_name
-
-    def get(self, field: str) -> str:
-        if field not in self._message_fields:
-            raise ValueError('No such name')
-
-        return self._mangled_names[field]
-
-
 class CodeGenerator:
-    def __init__(self, proto_file: FileDescriptorProto, index: Index, args):
+    def __init__(
+        self,
+        proto_file: FileDescriptorProto,
+        index: Index,
+        args,
+    ):
         self._proto_file: FileDescriptorProto = proto_file
         self._index: Index = index
-        self._args = args
-        self._indent = 0
-        self._uses_enums = False
-        self._uses_typing = False
-        self._import_requests = {}
+        self._snake_case: bool = args.snake_case
+        self._indent: int = 0
+        self._uses_enums: bool = False
+        self._uses_typing: bool = False
+        self._import_requests: Dict[str, FileDescriptorProto] = {}
         self._buffer = StringBuffer()
         self._import_buffer = StringBuffer()
-        self._field_manglers = {}
+        self._field_manglers: Dict[str, FieldMangler] = {}
+
+    @property
+    def proto_file(self):
+        return self._proto_file
+
+    @property
+    def index(self):
+        return self._index
 
     def empty(self) -> bool:
         return not (
@@ -374,7 +105,7 @@ class CodeGenerator:
         if message.name not in self._field_manglers:
             self._field_manglers[message.name] = FieldMangler(
                 message,
-                self._args.snake_case
+                self._snake_case
             )
 
         return self._field_manglers[message.name].get(field)
@@ -442,7 +173,7 @@ class CodeGenerator:
         self._import_requests[file.name] = file
         imported_name = (
             package +
-            protobuf_file_postfix.rstrip('.') +
+            PROTOBUF_FILE_POSTFIX.rstrip('.') +
             '.' +
             field_type[1 + len(file.package or ''):].lstrip('.')
         )
@@ -645,10 +376,10 @@ class CodeGenerator:
             else:
                 import_path = self.file_to_import_name(file)
 
-            w(f'import {import_path + protobuf_file_postfix} as \\')
+            w(f'import {import_path + PROTOBUF_FILE_POSTFIX} as \\')
 
             with self._import_buffer.indent():
-                w(self.file_to_package_name(file) + protobuf_file_postfix)
+                w(self.file_to_package_name(file) + PROTOBUF_FILE_POSTFIX)
 
         if self._import_requests:
             nl()
@@ -763,7 +494,7 @@ class CodeGenerator:
         content = self._buffer.read().strip('\n') + '\n'
 
         return CodeGeneratorResponse.File(
-            name=self.get_file_name(protobuf_file_postfix),
+            name=self.get_file_name(PROTOBUF_FILE_POSTFIX),
             content=fix_redundant_newlines(
                 imports +
                 content
@@ -780,178 +511,6 @@ class CodeGenerator:
             filename = self._index.base_package + '/' + filename
 
         return filename
-
-    def grpclib_imports(self, import_requests: Dict[str, FileDescriptorProto]) -> str:
-        buffer = StringBuffer()
-
-        buffer.write('import abc')
-        buffer.write('import typing')
-        buffer.nl()
-
-        if 'protox' in import_requests:
-            import_requests.pop('protox')
-            buffer.write('import protox')
-
-        buffer.write('import grpclib.const')
-        buffer.write('import grpclib.client')
-        buffer.write('import grpclib.server')
-        buffer.nl()
-
-        for file in import_requests.values():
-            if self._index.base_package:
-                import_path = self._index.base_package.replace('/', '.') + '.' + self.file_to_import_name(file)
-            else:
-                import_path = self.file_to_import_name(file)
-
-            buffer.write(f'import {import_path + protobuf_file_postfix} as \\')
-
-            with buffer.indent():
-                buffer.write(self.file_to_package_name(file) + protobuf_file_postfix)
-
-        buffer.nl(2)
-        return buffer.read()
-
-    def generate_grpclib_services(self) -> CodeGeneratorResponse.File:
-        buffer = StringBuffer()
-        import_requests = {}
-
-        for service in self._proto_file.service:
-            service_imports = self.write_grpclib_service(
-                service,
-                buffer,
-            )
-            import_requests.update(service_imports)
-
-        return CodeGeneratorResponse.File(
-            name=self.get_file_name(grpclib_file_postfix),
-            content=self.grpclib_imports(import_requests) + buffer.read(),
-        )
-
-    def grpc_type_to_py_name(self, grpc_type: str, import_requests: dict):
-        file = self._index.proto_files[grpc_type]
-
-        if is_well_known_type_field(grpc_type):
-            import_requests['protox'] = file
-            return self.resolve_google_protobuf_import(grpc_type)
-
-        import_requests[file.name] = file
-
-        return (
-            self.file_to_package_name(file) +
-            protobuf_file_postfix +
-            '.' +
-            grpc_type.split('.')[-1]
-        )
-
-    def grpc_url(self, service_name: str, method_name: str):
-        return f'/{self._proto_file.package}.{service_name}/{method_name}'
-
-    def write_grpclib_service(
-        self,
-        service: ServiceDescriptorProto,
-        buffer: StringBuffer,
-    ) -> dict:
-        import_requests = {}
-        w = buffer.write
-
-        w(f'class {service.name}Base(abc.ABC):')
-
-        with buffer.indent():
-            if service.method:
-                for method in service.method:
-                    w('@abc.abstractmethod')
-                    w(f'async def {to_snake_case(method.name)}(self, stream: grpclib.server.Stream):')
-
-                    with buffer.indent():
-                        w('pass')
-
-                    buffer.nl()
-
-                w('def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:')
-
-                with buffer.indent():
-                    w('return {')
-
-                    with buffer.indent():
-                        for method in service.method:
-                            w(f"'{self.grpc_url(service.name, method.name)}': grpclib.const.Handler(")
-
-                            with buffer.indent():
-                                cardinality_map = {
-                                    False: 'UNARY',
-                                    True: 'STREAM'
-                                }
-
-                                buffer.write(f'self.{to_snake_case(method.name)},')
-                                buffer.write(
-                                    'grpclib.const.Cardinality.',
-                                    cardinality_map[method.client_streaming],
-                                    '_',
-                                    cardinality_map[method.server_streaming],
-                                    ',',
-                                )
-                                input_message = self.grpc_type_to_py_name(
-                                    method.input_type,
-                                    import_requests,
-                                )
-                                output_message = self.grpc_type_to_py_name(
-                                    method.output_type,
-                                    import_requests,
-                                )
-
-                                buffer.write(f'{input_message},')
-                                buffer.write(f'{output_message},')
-
-                            w('),')
-
-                    w('}')
-            else:
-                w('def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:')
-                with buffer.indent():
-                    w('return {}')
-
-        buffer.nl(2)
-
-        w(f'class {service.name}Stub:')
-        with buffer.indent():
-            cardinality_map = {
-                False: 'Unary',
-                True: 'Stream'
-            }
-
-            if service.method:
-                w('def __init__(self, channel: grpclib.client.Channel):')
-
-                with buffer.indent():
-                    for method in service.method:
-                        w(
-                            'self.',
-                            to_snake_case(method.name),
-                            ' = grpclib.client.',
-                            cardinality_map[method.client_streaming],
-                            cardinality_map[method.server_streaming],
-                            'Method(',
-                        )
-                        input_message = self.grpc_type_to_py_name(
-                            method.input_type,
-                            import_requests,
-                        )
-                        output_message = self.grpc_type_to_py_name(
-                            method.output_type,
-                            import_requests,
-                        )
-
-                        with buffer.indent():
-                            w('channel,'),
-                            w("'", self.grpc_url(service.name, method.name), "'", ',')
-                            w(input_message, ',')
-                            w(output_message, ',')
-
-                        w(')')
-            else:
-                w('pass')
-
-        return import_requests
 
 
 def create_arg_parser() -> argparse.ArgumentParser:
@@ -1025,9 +584,9 @@ def main():
 
     if args.grpclib:
         response_files += [
-            x.generate_grpclib_services()
-            for x in code_generators
-            if x.has_services()
+            GrpclibCodeGenerator(gen).generate()
+            for gen in code_generators
+            if gen.has_services()
         ]
 
     response = CodeGeneratorResponse(
