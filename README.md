@@ -1,5 +1,5 @@
 # Protox
-Protobuf implementation for Python 3 that generates human-readable python code 
+Protobuf implementation for Python 3 that generates human-readable code with type hinting support
 
 ## Quick example
 ```python
