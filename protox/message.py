@@ -97,12 +97,6 @@ def _add_field_to_message(
     name: str,
     field: Field
 ):
-    """
-    The following function was intentionally extracted from the Message type.
-    The use case of the function is delayed fields assigning for cases like recursion
-    and circular dependency when we first define a message before referencing it.
-    """
-
     if isinstance(field, Repeated):
         field_getter = RepeatedGetter(name, field.field)
     elif isinstance(field, MapField):
@@ -297,10 +291,6 @@ class Message(metaclass=MessageMeta):
 
     @classmethod
     def from_stream(cls: Type[T], stream: BinaryIO) -> T:
-        """
-        FIXME: Probably  Replace message_fields with creating a new Message instance
-         and setting attributes on it
-        """
         message_fields = {}
 
         while True:
@@ -320,13 +310,10 @@ class Message(metaclass=MessageMeta):
                     )
 
                 if isinstance(field, Repeated) and not field.packed:
-                    # FIXME: probably extract the following fields to message_fields = {}
-                    message_fields.setdefault(field.name, [])
-                    message_fields[field.name].append(field.decode(stream))
+                    message_fields.setdefault(field.name, []).append(field.decode(stream))
                 elif isinstance(field, MapField):
-                    message_fields.setdefault(field.name, {})
                     key, value = field.decode(stream)
-                    message_fields[field.name][key] = value
+                    message_fields.setdefault(field.name, {})[key] = value
                 else:
                     message_fields[field.name] = field.decode(stream)
             else:
