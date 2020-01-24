@@ -51,27 +51,27 @@ protoc \
 * Useful helper features like to_dict()
 
 ## Features
-*[x] Messages
-*[x] Enums
-*[x] Nested messages
-*[x] Maps
-*[x] Well-known types
-*[x] Repeated fields
-*[x] Repeated messages
-*[x] Repeated enums
-*[x] Custom Message.to_python() / from_python() functions
-*[x] Code generator
-    *[x] Protobuf
-    *[x] Grpclib
-    *[ ] Grpc
+- [x] Messages
+- [x] Enums
+- [x] Nested messages
+- [x] Maps
+- [x] Well-known types
+- [x] Repeated fields
+- [x] Repeated messages
+- [x] Repeated enums
+- [x] Custom Message.to_python() / from_python() functions
+- [ ] Group fields 
+
 
 ## Code generator features
-* Root python package with properly resolved imports
-* Compile protobuf file with or without dependencies
-* Names mangling to avoid reserved name collisions 
-* Recursive messages/enums support using deferred field declaration
-* Field names to_snake_case support
-* [grpclib](https://github.com/vmagamedov/grpclib/) support out of the box
+- [x] Protobuf
+- [x] [Grpclib](https://github.com/vmagamedov/grpclib/)
+- [ ] Grpc.io
+- [x] Custom python package for protobuf out messages
+- [x] Compile protobuf file with dependencies
+- [x] Names mangling to avoid reserved names collisions
+- [x] Recursive messages/enums support
+- [x] Field names to_snake_case support
 
 ## Difference with google's protobuf implementation
 Binary protocol works exactly as google's implementation does.
