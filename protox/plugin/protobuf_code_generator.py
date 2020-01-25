@@ -43,6 +43,9 @@ class ProtobufCodeGenerator:
     def has_services(self) -> bool:
         return bool(self._proto_file.service)
 
+    def has_messages(self) -> bool:
+        return bool(self._proto_file.message_type)
+
     def resolve_field_name(self, message: DescriptorProto, field: str) -> str:
         if message.name not in self._field_manglers:
             self._field_manglers[message.name] = FieldMangler(
@@ -310,7 +313,8 @@ class ProtobufCodeGenerator:
         if self._uses_enums or self._uses_typing:
             nl()
 
-        w('import protox\n')
+        if self.has_messages():
+            w('import protox\n')
 
         for file in self._import_requests.values():
             if self._index.base_package:
