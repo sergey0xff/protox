@@ -1,4 +1,3 @@
-from protox.well_known_types.struct import Struct
 from .any import Any
 from .descriptor import (
     FileDescriptorSet,
@@ -26,7 +25,13 @@ from .descriptor import (
 from .duration import Duration
 from .empty import Empty
 from .field_mask import FieldMask
+from .plugin import (
+    Version,
+    CodeGeneratorResponse,
+    CodeGeneratorRequest,
+)
 from .source_context import SourceContext
+from .struct import Struct
 from .timestamp import Timestamp
 from .type import (
     Syntax,
@@ -36,7 +41,6 @@ from .type import (
     Field,
     Type,
 )
-from . import plugin
 
 __all__ = [
     'Any',
@@ -73,5 +77,7 @@ __all__ = [
     'UninterpretedOption',
     'SourceCodeInfo',
     'GeneratedCodeInfo',
-    'plugin',
+    'Version',
+    'CodeGeneratorRequest',
+    'CodeGeneratorResponse',
 ]

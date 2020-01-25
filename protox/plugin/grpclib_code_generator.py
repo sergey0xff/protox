@@ -3,6 +3,8 @@ from typing import Dict
 from protox import FileDescriptorProto, ServiceDescriptorProto
 from protox.plugin.common import GRPCLIB_FILE_POSTFIX, to_snake_case, PROTOBUF_FILE_POSTFIX, StringBuffer, \
     is_well_known_type_field
+from protox.plugin.index import Index
+from protox.plugin.protobuf_code_generator import ProtobufCodeGenerator
 from protox.well_known_types.plugin import CodeGeneratorResponse
 
 
@@ -11,8 +13,8 @@ class GrpclibCodeGenerator:
         self,
         code_generator,
     ):
-        self._code_gen = code_generator
-        self._index = code_generator.index
+        self._code_gen: ProtobufCodeGenerator = code_generator
+        self._index: Index = code_generator.index
 
     def grpclib_imports(self, import_requests: Dict[str, FileDescriptorProto]) -> str:
         buffer = StringBuffer()
@@ -178,7 +180,7 @@ class GrpclibCodeGenerator:
         buffer = StringBuffer()
         import_requests = {}
 
-        for service in self._code_gen._proto_file.service:
+        for service in self._code_gen.proto_file.service:
             service_imports = self.write_grpclib_service(
                 service,
                 buffer,
