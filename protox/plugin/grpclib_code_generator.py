@@ -1,6 +1,6 @@
 from typing import Dict
 
-from protox import FileDescriptorProto, ServiceDescriptorProto
+from protox import FileDescriptorProto, ServiceDescriptorProto, MethodDescriptorProto
 from protox.plugin.common import GRPCLIB_FILE_POSTFIX, to_snake_case, PROTOBUF_FILE_POSTFIX, StringBuffer, \
     is_well_known_type_field
 from protox.plugin.index import Index
@@ -9,9 +9,19 @@ from protox.well_known_types.plugin import CodeGeneratorResponse
 
 
 class GrpclibCodeGenerator:
+    server_cardinality_map = {
+        True: 'STREAM',
+        False: 'UNARY',
+    }
+
+    client_cardinality_map = {
+        True: 'Stream',
+        False: 'Unary',
+    }
+
     def __init__(
         self,
-        code_generator,
+        code_generator: ProtobufCodeGenerator,
     ):
         self._code_gen: ProtobufCodeGenerator = code_generator
         self._index: Index = code_generator.index
@@ -50,7 +60,11 @@ class GrpclibCodeGenerator:
         buffer.nl(2)
         return buffer.read()
 
-    def grpc_type_to_py_name(self, grpc_type: str, import_requests: dict):
+    def grpc_type_to_py_name(
+        self,
+        grpc_type: str,
+        import_requests: Dict[str, FileDescriptorProto]
+    ) -> str:
         file = self._index.proto_files[grpc_type]
 
         if is_well_known_type_field(grpc_type):
@@ -66,14 +80,89 @@ class GrpclibCodeGenerator:
             grpc_type.split('.')[-1]
         )
 
-    def grpc_url(self, service_name: str, method_name: str):
+    def grpc_url(
+        self,
+        service_name: str,
+        method_name: str,
+    ) -> str:
         return f'/{self._code_gen.proto_file.package}.{service_name}/{method_name}'
+
+    def write_server_method(
+        self,
+        service: ServiceDescriptorProto,
+        method: MethodDescriptorProto,
+        buffer: StringBuffer,
+        import_requests: Dict[str, FileDescriptorProto],
+    ):
+        w = buffer.write
+
+        w(
+            f"'{self.grpc_url(service.name, method.name)}'"
+            f": grpclib.const.Handler("
+        )
+
+        with buffer.indent():
+            w(f'self.{to_snake_case(method.name)},')
+            w(
+                'grpclib.const.Cardinality.',
+                self.server_cardinality_map[method.client_streaming],
+                '_',
+                self.server_cardinality_map[method.server_streaming],
+                ',',
+            )
+            input_message = self.grpc_type_to_py_name(
+                method.input_type,
+                import_requests,
+            )
+            w(f'{input_message},')
+
+            output_message = self.grpc_type_to_py_name(
+                method.output_type,
+                import_requests,
+            )
+            w(f'{output_message},')
+
+        w('),')
+
+    def write_client_method(
+        self,
+        service: ServiceDescriptorProto,
+        method: MethodDescriptorProto,
+        buffer: StringBuffer,
+        import_requests: Dict[str, FileDescriptorProto],
+    ):
+        w = buffer.write
+
+        w(
+            'self.',
+            to_snake_case(method.name),
+            ' = grpclib.client.',
+            self.client_cardinality_map[method.client_streaming],
+            self.client_cardinality_map[method.server_streaming],
+            'Method(',
+        )
+        input_message = self.grpc_type_to_py_name(
+            method.input_type,
+            import_requests,
+        )
+        output_message = self.grpc_type_to_py_name(
+            method.output_type,
+            import_requests,
+        )
+
+        with buffer.indent():
+            w('channel,'),
+            w("'", self.grpc_url(service.name, method.name), "'", ',')
+            w(input_message, ',')
+            w(output_message, ',')
+
+        w(')')
 
     def write_grpclib_service(
         self,
         service: ServiceDescriptorProto,
         buffer: StringBuffer,
-    ) -> dict:
+    ) -> Dict[str, FileDescriptorProto]:
         import_requests = {}
         w = buffer.write
 
@@ -97,35 +186,12 @@ class GrpclibCodeGenerator:
 
                     with buffer.indent():
                         for method in service.method:
-                            w(f"'{self.grpc_url(service.name, method.name)}': grpclib.const.Handler(")
-
-                            with buffer.indent():
-                                cardinality_map = {
-                                    False: 'UNARY',
-                                    True: 'STREAM'
-                                }
-
-                                buffer.write(f'self.{to_snake_case(method.name)},')
-                                buffer.write(
-                                    'grpclib.const.Cardinality.',
-                                    cardinality_map[method.client_streaming],
-                                    '_',
-                                    cardinality_map[method.server_streaming],
-                                    ',',
-                                )
-                                input_message = self.grpc_type_to_py_name(
-                                    method.input_type,
-                                    import_requests,
-                                )
-                                output_message = self.grpc_type_to_py_name(
-                                    method.output_type,
-                                    import_requests,
-                                )
-
-                                buffer.write(f'{input_message},')
-                                buffer.write(f'{output_message},')
-
-                            w('),')
+                            self.write_server_method(
+                                service,
+                                method,
+                                buffer,
+                                import_requests,
+                            )
 
                     w('}')
             else:
@@ -137,40 +203,17 @@ class GrpclibCodeGenerator:
 
         w(f'class {service.name}Stub:')
         with buffer.indent():
-            cardinality_map = {
-                False: 'Unary',
-                True: 'Stream'
-            }
-
             if service.method:
                 w('def __init__(self, channel: grpclib.client.Channel):')
 
                 with buffer.indent():
                     for method in service.method:
-                        w(
-                            'self.',
-                            to_snake_case(method.name),
-                            ' = grpclib.client.',
-                            cardinality_map[method.client_streaming],
-                            cardinality_map[method.server_streaming],
-                            'Method(',
-                        )
-                        input_message = self.grpc_type_to_py_name(
-                            method.input_type,
+                        self.write_client_method(
+                            service,
+                            method,
+                            buffer,
                             import_requests,
                         )
-                        output_message = self.grpc_type_to_py_name(
-                            method.output_type,
-                            import_requests,
-                        )
-
-                        with buffer.indent():
-                            w('channel,'),
-                            w("'", self.grpc_url(service.name, method.name), "'", ',')
-                            w(input_message, ',')
-                            w(output_message, ',')
-
-                        w(')')
             else:
                 w('pass')
 
