@@ -45,6 +45,8 @@ protoc \
 
 ## Core concepts 
 * Human-readable python3.6+ generated code with type hinting
+* None instead of zero values
+* Has field in both proto2 and proto3
 * Protocols are easy to describe without code generation 
 * Messages implemented in more pythonic way: to_bytes() instead of SerializeToString()
 * Enums are just enums python enums
@@ -60,13 +62,13 @@ protoc \
 - [x] Repeated messages
 - [x] Repeated enums
 - [x] Custom Message.to_python() / from_python() functions
-- [ ] Group fields 
+- [ ] Group fields (Deprecated by protobuf)
 
 
 ## Code generator features
 - [x] Protobuf
 - [x] [Grpclib](https://github.com/vmagamedov/grpclib/)
-- [ ] Grpc.io
+- [ ] [Grpc.io](https://github.com/grpc/grpc/tree/master/src/python/grpcio)
 - [x] Custom python package for protobuf out messages
 - [x] Compile protobuf file with dependencies
 - [x] Names mangling to avoid reserved names collisions
