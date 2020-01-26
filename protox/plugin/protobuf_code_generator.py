@@ -55,15 +55,16 @@ class ProtobufCodeGenerator:
 
         return self._field_manglers[message.name].get(field)
 
-    def is_local_type(self, py_type: str):
+    def is_local_type(self, type_name: str):
         """
+        :param type_name message or enum type
         Checks if py_type defined in current file
         """
-        return (
-            not py_type
-            or
-            self._index.proto_files.get(py_type) == self._proto_file
-        )
+        try:
+            return self._index.proto_files[type_name] == self._proto_file
+        except KeyError:
+            print(self.index.proto_files)
+            exit(0)
 
     def get_local_type(self, type_name: str) -> str:
         field_type = type_name.lstrip('.')
@@ -154,9 +155,8 @@ class ProtobufCodeGenerator:
                 value_type = self.resolve_field_import(message.field[1])
         elif is_enum_field(message.field[1]):
             field = message.field[1]
-            path = '.'.join(field.type_name.split('.')[:-1])
 
-            if self.is_local_type(path):
+            if self.is_local_type(field.type_name):
                 value_type = self.get_local_type(field.type_name)
             else:
                 value_type = self.resolve_field_import(field)
@@ -177,9 +177,7 @@ class ProtobufCodeGenerator:
             else:
                 py_type = self.resolve_field_import(field)
         elif is_enum_field(field):
-            path = '.'.join(field.type_name.split('.')[:-1])
-
-            if self.is_local_type(path):
+            if self.is_local_type(field.type_name):
                 py_type = f"'{self.get_local_type(field.type_name)}'"
             else:
                 py_type = self.resolve_field_import(field)

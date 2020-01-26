@@ -414,7 +414,7 @@ class Message(metaclass=MessageMeta):
         if not isinstance(other, type(self)):
             raise ValueError(
                 f'Cannot compare protocol message {type(self).__qualname__} '
-                f'to {type(self)}'
+                f'to {type(other).__qualname__}'
             )
 
         return self._data == other._data

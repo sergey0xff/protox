@@ -65,14 +65,21 @@ class Index:
         message: DescriptorProto,
         proto_file: FileDescriptorProto,
     ):
-        full_name = prefix + message.name
-        self._proto_files[full_name] = proto_file
-        self._messages[full_name] = message
+        full_message_name = prefix + message.name
+        self._proto_files[full_message_name] = proto_file
+        self._messages[full_message_name] = message
 
         for nested_type in message.nested_type:
             self._visit_message(
-                full_name + '.',
+                full_message_name + '.',
                 nested_type,
+                proto_file,
+            )
+
+        for enum_type in message.enum_type:
+            self._visit_enum(
+                full_message_name + '.',
+                enum_type,
                 proto_file,
             )
 
