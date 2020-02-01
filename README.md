@@ -45,12 +45,12 @@ protoc \
 
 ## Core concepts 
 * Human-readable python3.6+ generated code with type hinting
-* None instead of zero values
-* Has field in both proto2 and proto3
+* Support protobuf 2 and 3 at the same time
+* `None` values instead of zero values in fields for both proto2 and proto3
+* `Message.has_field()` in both proto2 and proto3
 * Protocols are easy to describe without code generation 
 * Messages implemented in more pythonic way: to_bytes() instead of SerializeToString()
-* Enums are just enums python enums
-* Useful helper features like to_dict()
+* Enums are just enums python int enums
 
 ## Features
 - [x] Messages
