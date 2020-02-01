@@ -437,7 +437,7 @@ class Message(metaclass=MessageMeta):
         buffer = buffer or []
 
         if indent_level == 0:
-            buffer.append(f"{type(self).__name__}")
+            buffer.append(f"message {type(self).__name__}")
 
         indent_level += 1
 
@@ -454,7 +454,7 @@ class Message(metaclass=MessageMeta):
         indent_level: int,
     ):
         indent = self._format_indent * indent_level
-        buffer.append(f'{indent}{name}: {type(value).__name__} = {{')
+        buffer.append(f'{indent}{name} = {type(value).__name__} {{')
         value._format(buffer, indent_level)
         buffer.append(f'{indent}}}')
 
@@ -476,10 +476,11 @@ class Message(metaclass=MessageMeta):
         indent_level: int,
     ):
         indent = self._format_indent * indent_level
-        buffer.append(f'{indent}{name}: {self._field_by_name[name].of_type.__name__} = [')
+        buffer.append(f'{indent}{name} = [')
         nested_indent = indent + self._format_indent
+        first_n_items = 10
 
-        for item in value:
+        for item in value[:first_n_items]:
             if isinstance(item, Message):
                 if item.is_empty():
                     buffer.append(f'{nested_indent}{{}}')
@@ -489,6 +490,9 @@ class Message(metaclass=MessageMeta):
                     buffer.append(f'{nested_indent}}}')
             else:
                 self._format_value('', item, buffer, indent_level + 1)
+
+        if len(value) > first_n_items:
+            buffer.append(f'{nested_indent}... items more: {len(value) - first_n_items}')
 
         buffer.append(f'{indent}]')
 
@@ -564,7 +568,7 @@ class Message(metaclass=MessageMeta):
             )
         else:
             indent = self._format_indent * indent_level
-            buffer.append(f'{indent}{name + " =" if name else ""} {value!r}')
+            buffer.append(f'{indent}{name + " = " if name else ""}{value!r}')
 
     # The following methods provided for libraries like grpclib to simplify end-user experience
     def SerializeToString(self):
