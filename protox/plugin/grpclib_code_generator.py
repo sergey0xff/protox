@@ -85,7 +85,10 @@ class GrpclibCodeGenerator:
         service_name: str,
         method_name: str,
     ) -> str:
-        return f'/{self._code_gen.proto_file.package}.{service_name}/{method_name}'
+        if self._code_gen.proto_file.package:
+            service_name = f'{self._code_gen.proto_file.package}.{service_name}'
+
+        return f'/{service_name}/{method_name}'
 
     def write_server_method(
         self,
