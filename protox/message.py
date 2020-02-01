@@ -429,11 +429,11 @@ class Message(metaclass=MessageMeta):
         return not self == other
 
     def __str__(self):
-        return self.format()
+        return self._format()
 
     _format_indent = ' ' * 4
 
-    def format(self, buffer: list = None, indent_level=0) -> str:
+    def _format(self, buffer: list = None, indent_level=0) -> str:
         buffer = buffer or []
 
         if indent_level == 0:
@@ -442,7 +442,7 @@ class Message(metaclass=MessageMeta):
         indent_level += 1
 
         for key, value in self._data.items():
-            self._format(key, value, buffer, indent_level)
+            self._format_value(key, value, buffer, indent_level)
 
         return '\n'.join(buffer)
 
@@ -455,7 +455,7 @@ class Message(metaclass=MessageMeta):
     ):
         indent = self._format_indent * indent_level
         buffer.append(f'{indent}{name}: {type(value).__name__} = {{')
-        value.format(buffer, indent_level)
+        value._format(buffer, indent_level)
         buffer.append(f'{indent}}}')
 
     def _format_enum(
@@ -485,10 +485,10 @@ class Message(metaclass=MessageMeta):
                     buffer.append(f'{nested_indent}{{}}')
                 else:
                     buffer.append(f'{nested_indent}{{')
-                    item.format(buffer, indent_level + 1)
+                    item._format(buffer, indent_level + 1)
                     buffer.append(f'{nested_indent}}}')
             else:
-                self._format('', item, buffer, indent_level + 1)
+                self._format_value('', item, buffer, indent_level + 1)
 
         buffer.append(f'{indent}]')
 
@@ -539,7 +539,7 @@ class Message(metaclass=MessageMeta):
 
         buffer.append(f'{indent}{name + " =" if name else ""} {value_display}')
 
-    def _format(self, name: str, value, buffer: list, indent_level: int):
+    def _format_value(self, name: str, value, buffer: list, indent_level: int):
         type_to_formatter = {
             ValidatedList: self._format_repeated,
             ValidatedDict: self._format_map,
