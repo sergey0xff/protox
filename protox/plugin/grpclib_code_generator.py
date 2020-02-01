@@ -37,8 +37,8 @@ class GrpclibCodeGenerator:
             import_requests.pop('protox')
             buffer.write('import protox')
 
-        buffer.write('import grpclib.const')
         buffer.write('import grpclib.client')
+        buffer.write('import grpclib.const')
         buffer.write('import grpclib.server')
         buffer.nl()
 
@@ -232,5 +232,10 @@ class GrpclibCodeGenerator:
 
         return CodeGeneratorResponse.File(
             name=self._code_gen.get_file_name(GRPCLIB_FILE_POSTFIX),
-            content=self.grpclib_imports(import_requests) + buffer.read(),
+            content=(
+                self._code_gen.preamble +
+                '\n' +
+                self.grpclib_imports(import_requests) +
+                buffer.read()
+            ),
         )
