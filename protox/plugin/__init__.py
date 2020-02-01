@@ -16,7 +16,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        '--base-package-dir',
+        '--base-package',
         default='',
         type=str,
         help='Base python package directory relative to the root directory. E.g. app/protobuf, .'
@@ -26,11 +26,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
         action='store_true',
         help='If enabled all imported .proto files are also generated',
     )
-    parser.add_argument(
-        '--snake-case',
-        action='store_true',
-        help='If enabled message fields, enum variants and grpc methods are renamed to snake_case'
-    )
+
     parser.add_argument(
         '--grpclib',
         action='store_true',
@@ -52,7 +48,7 @@ def main():
 
     index = Index(
         request,
-        args.base_package_dir
+        args.base_package
     )
 
     files_to_generate: Set[str] = set(request.file_to_generate)
@@ -69,7 +65,7 @@ def main():
         ]
 
     code_generators = [
-        ProtobufCodeGenerator(file, index, args)
+        ProtobufCodeGenerator(file, index)
         for file in files
     ]
 

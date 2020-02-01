@@ -13,11 +13,9 @@ class ProtobufCodeGenerator:
         self,
         proto_file: FileDescriptorProto,
         index: Index,
-        args,
     ):
         self._proto_file: FileDescriptorProto = proto_file
         self._index: Index = index
-        self._snake_case: bool = args.snake_case
         self._indent: int = 0
         self._uses_enums: bool = False
         self._uses_typing: bool = False
@@ -50,7 +48,6 @@ class ProtobufCodeGenerator:
         if message.name not in self._field_manglers:
             self._field_manglers[message.name] = FieldMangler(
                 message,
-                self._snake_case
             )
 
         return self._field_manglers[message.name].get(field)

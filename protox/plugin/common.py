@@ -239,13 +239,12 @@ class StringBuffer:
 
 
 class FieldMangler:
-    def __init__(self, message: DescriptorProto, snake_case_flag: bool):
+    def __init__(self, message: DescriptorProto):
         # original field names
         self._message_fields = set(
             x.name for x in message.field
         )
         self._name_counter = Counter()
-        self._snake_case_flag = snake_case_flag
 
         # maps original field names to mangled ones
         self._mangled_names: Dict[str, str] = {}
@@ -262,10 +261,7 @@ class FieldMangler:
         return f'{name}_{self._name_counter[name]}'
 
     def _process_name(self, name: str):
-        if self._snake_case_flag:
-            py_name = to_snake_case(name)
-        else:
-            py_name = name
+        py_name = to_snake_case(name)
 
         if (
             py_name in RESERVED_NAMES
