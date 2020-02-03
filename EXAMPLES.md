@@ -1,4 +1,15 @@
 # Examples
+* [Encoding / decoding messages](#encoding--decoding-messages)
+* [Default value](#default-values)
+* [Repeated fields](#repeated-fields)
+* [Message fields](#message-fields)
+* [Repeated message fields](#repeated-message-fields)
+* [Enum fields](#enum-fields)
+* [Repeated enum fields](#repeated-enum-fields)
+* [Recursive message fields](#recursive-message-fields)
+* [One of fields](#one-of-fields)
+* [Map fields](#map-fields)
+
 ## Encoding / decoding messages
 ```python
 from protox import Message, Int32
@@ -15,7 +26,7 @@ new_message = SimpleMessage.from_bytes(encoded)
 assert new_message == message
 ```
 
-## Default value
+## Default values
 ```python
 from protox import Message, Int32
 
@@ -103,7 +114,7 @@ user = User(type=User.Type.ADMIN)
 assert user.type == User.Type.ADMIN
 ```
 
-## Repeated enum 
+## Repeated enum fields 
 ```python
 from enum import IntEnum
 from typing import List
@@ -127,7 +138,7 @@ user.colors = [
 ]
 ```
 
-## Recursive message field
+## Recursive message fields
 ```python
 from protox import Message, Int32, define_fields
 
@@ -162,7 +173,7 @@ tree = Node(
 )
 ```
 
-## One of field
+## One of fields
 ```python
 from enum import IntEnum
 
