@@ -390,7 +390,10 @@ class ProtobufCodeGenerator:
                     field_type = f'protox.{pb_to_protox_type(field.type)}'
 
                     if field.default_value:
-                        field_kwargs['default'] = pythonize_default_value(field.default_value)
+                        field_kwargs['default'] = pythonize_default_value(
+                            field.default_value,
+                            field.type,
+                        )
 
                 if self.is_map_field(field):
                     pass

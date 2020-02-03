@@ -151,11 +151,23 @@ def pb_to_protox_type(pb_type: FieldDescriptorProto.Type) -> str:
     }[pb_type]
 
 
-def pythonize_default_value(default_value: str) -> str:
-    return {
-        'true': 'True',
-        'false': 'False',
-    }.get(default_value, default_value)
+def pythonize_default_value(
+    default_value: str,
+    field_type: FieldDescriptorProto.Type
+) -> str:
+    if field_type == FieldDescriptorProto.Type.TYPE_STRING:
+        return f"'{default_value}'"
+
+    if field_type == FieldDescriptorProto.Type.TYPE_BYTES:
+        return f"b'{default_value}'"
+
+    if field_type == FieldDescriptorProto.Type.TYPE_BOOL:
+        return {
+            'true': 'True',
+            'false': 'False',
+        }[default_value]
+
+    return default_value
 
 
 def parse_base_package(parameter: str) -> str:
