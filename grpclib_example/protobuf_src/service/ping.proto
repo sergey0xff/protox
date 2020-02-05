@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+message PingRequest {
+    required string message = 1;
+}
+
+message PingResponse {
+    enum Status {
+        OK = 1;
+        ERROR = 2;
+    }
+
+    required Status status = 1;
+    required string message = 2;
+}

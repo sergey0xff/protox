@@ -17,7 +17,9 @@ class User(Message):
     status: Status = EnumField(Status, number=3, required=True, default=Status.USER)
 ```
 
-## [More examples here](EXAMPLES.md)
+## More examples 
+* [EXAMPLES.md](EXAMPLES.md)
+* [Grpclib example](grpclib_example)
 
 ## Code generation
 Code generator implemented as a protoc plugin so you have to install it first:
