@@ -88,6 +88,8 @@ The difference is in the way messages behave:
 * Enums are just python int enums
 
 ## Generated code example
+[Grpclib service example](grpclib_example/app/protobuf/service_grpclib.py)
+
 ```python
 from enum import IntEnum
 
