@@ -283,9 +283,6 @@ class Message(metaclass=MessageMeta):
 
     @classmethod
     def from_bytes(cls: Type[T], data: bytes) -> T:
-        if not data:
-            return cls()
-
         stream = io.BytesIO(data)
         return cls.from_stream(stream)
 
@@ -341,7 +338,7 @@ class Message(metaclass=MessageMeta):
             if value is None:
                 if field.required:
                     raise MessageEncodeError(
-                        f'Field {type(self).__name__}.{key} is required but not set'
+                        f'Field {type(self).__name__}.{key} is required but was not set'
                     )
                 else:
                     continue
