@@ -1,5 +1,5 @@
 # Protox
-Protobuf implementation for Python 3 that generates human-readable code with type hinting support
+Protocol buffers implementation for Python 3 that generates human-readable code with type hinting support
 
 ## Quick example
 ```python
@@ -46,6 +46,24 @@ protoc \
     --protox_out=. \
     ./protobuf_src/user.proto
 ```
+
+#### Generate grpclib service with all required dependencies 
+The following code generates service `ping_pong.proto` from the `protobuf_src` directory into `{$PROJECT_ROOT}/app/protobuf`.
+
+The protox plugin supports 3 options:
+* --base-package=path/to/protobuf/out 
+* --grpclib  # generates grpclib services 
+* --with-dependencies  # generates dependencies for the given protobuf file
+
+The options to the plugin are passed using the `--protox_opt="{plugin options here}"` command 
+```bash
+protoc \
+    --proto_path=protobuf_src \
+    --protox_out=. \
+    --protox_opt="--base-package=app/protobuf --grpclib --with-dependencies" \
+    ./protobuf_src/ping_pong.proto
+```
+
 
 ## Core concepts 
 * Human-readable python3.6+ generated code with type hinting
