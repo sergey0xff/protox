@@ -7,14 +7,26 @@ from enum import IntEnum
 from protox import Message
 from protox import UInt32, String, EnumField
 
+
 class User(Message):
-    class Status(IntEnum):
+    class Role(IntEnum):
         USER = 1
-        ADMIN = 2       
-        
+        ADMIN = 2
+
     id: int = UInt32(number=1, required=True)
     email: str = String(number=2, required=True)
-    status: Status = EnumField(Status, number=3, required=True, default=Status.USER)
+    role: Role = EnumField(Role, number=3, required=True, default=Role.USER)
+
+
+user = User(id=1, email="john@doe.com", role=User.Role.USER)
+user_data = user.to_bytes()
+
+print(User.from_bytes(user_data))
+# Outputs:
+# message User
+#     id = 1
+#     email = 'john@doe.com'
+#     role = Role.USER
 ```
 
 ## More examples 
