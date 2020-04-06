@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='protox',
-    version='0.1.1',
+    version='0.1.2',
     description='Protobuf for humans',
     long_description=open('README.md', 'r').read(),
     long_description_content_type='text/markdown',
@@ -11,7 +11,9 @@ setup(
     author_email='srg.tikhonov@gmail.com',
     license='MIT',
     entry_points={
-        'console_scripts': ['protoc-gen-protox=protox.plugin:main']
+        'console_scripts': [
+            'protoc-gen-protox=protox.plugin:main'
+        ]
     },
     packages=[
         'protox',

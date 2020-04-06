@@ -414,7 +414,10 @@ class Message(metaclass=MessageMeta):
                 f'to {type(other).__qualname__}'
             )
 
-        return self._data == other._data
+        return all(
+            getattr(self, field) == getattr(other, field)
+            for field in self.list_fields()
+        )
 
     def __ne__(self, other):
         if not isinstance(other, type(self)):

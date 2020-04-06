@@ -431,3 +431,20 @@ def test_equals():
     assert not (one == two)
     assert one == three
     assert not (one != three)
+
+
+def test_default_equals():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1, default=0)
+
+    assert SimpleMessage() == SimpleMessage(x=0)
+
+
+def test_message_read_equals():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1, default=0)
+
+    a = SimpleMessage(x=0)
+    b = SimpleMessage.from_bytes(a.to_bytes())
+
+    assert a == b
