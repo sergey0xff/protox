@@ -240,6 +240,9 @@ class ProtobufCodeGenerator:
             if self.write_oneofs(message):
                 nl()
 
+            w(f'DESCRIPTOR: protox.DescriptorProto')
+            nl()
+
             self.write_init(message)
 
     def write_init(self, message: DescriptorProto):
@@ -340,6 +343,13 @@ class ProtobufCodeGenerator:
     def write_define_fields(self, message: DescriptorProto, path: str = ''):
         w = self._buffer.write
 
+        w(
+            'FILE_DESCRIPTOR = protox.FileDescriptorProto.from_bytes(',
+            repr(self._proto_file.to_bytes()),
+            ')',
+            '\n',
+        )
+
         for nested_type in message.nested_type:
             if is_map_message(nested_type):
                 continue
@@ -424,7 +434,33 @@ class ProtobufCodeGenerator:
 
                 w('),')
 
-        w(')\n')
+        w(')')
+        w(
+            message.name,
+            f'.DESCRIPTOR = protox.DescriptorProto.from_bytes(',
+            repr(message.to_bytes()),
+            ')',
+        )
+        w(
+            message.name,
+            '.DESCRIPTOR.file_descriptor = FILE_DESCRIPTOR',
+        )
+
+        package = self._proto_file.package
+
+        if package:
+            message_full_name = package.lstrip('.') + '.' + message.name
+        else:
+            message_full_name = message.name
+
+        w(
+            message.name,
+            '.DESCRIPTOR.full_name = ',
+            "'",
+            message_full_name,
+            "'",
+            '\n'
+        )
 
     def generate(self) -> CodeGeneratorResponse.File:
         nl = self._buffer.nl

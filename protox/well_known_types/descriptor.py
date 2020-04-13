@@ -108,6 +108,10 @@ class DescriptorProto(protox.Message):
     reserved_range: typing.List['DescriptorProto.ReservedRange']
     reserved_name: typing.List[str]
 
+    # The following fields provided by code generator
+    full_name: typing.Optional[str] = None
+    file_descriptor: FileDescriptorProto = None
+
     def __init__(
         self,
         *,

@@ -222,6 +222,9 @@ class Message(metaclass=MessageMeta):
     _field_by_number: Dict[int, Union[Field, Repeated]] = ...
     _one_of_by_field_name: dict = ...
 
+    # Provided by code generator
+    DESCRIPTOR = ...
+
     _to_python: Optional[Callable] = None
     _from_python: Optional[Callable] = None
 
