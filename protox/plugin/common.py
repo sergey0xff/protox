@@ -3,9 +3,10 @@ from collections import Counter
 from contextlib import contextmanager
 from typing import Dict, List
 
-from protox import DescriptorProto, FieldDescriptorProto
+from protox import DescriptorProto, FieldDescriptorProto, Message
 
-RESERVED_NAMES = [
+MESSAGE_PROPS = set(dir(Message))
+RESERVED_NAMES = {
     'False',
     'None',
     'True',
@@ -54,7 +55,9 @@ RESERVED_NAMES = [
     'abc',
 
     'IntEnum',
-]
+
+    *MESSAGE_PROPS,
+}
 PROTOBUF_FILE_POSTFIX = '_pb'
 GRPCLIB_FILE_POSTFIX = '_grpclib'
 
@@ -270,7 +273,12 @@ class FieldMangler:
         while f'{name}_{self._name_counter[name]}' in self._message_fields:
             self._name_counter[name] += 1
 
-        return f'{name}_{self._name_counter[name]}'
+        counter = self._name_counter[name]
+
+        if counter == 1:
+            counter = ''
+
+        return f'{name}_{counter}'
 
     def _process_name(self, name: str):
         py_name = to_snake_case(name)
