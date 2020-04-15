@@ -342,13 +342,7 @@ class ProtobufCodeGenerator:
 
     def write_define_fields(self, message: DescriptorProto, path: str = ''):
         w = self._buffer.write
-
-        w(
-            'FILE_DESCRIPTOR = protox.FileDescriptorProto.from_bytes(',
-            repr(self._proto_file.to_bytes()),
-            ')',
-            '\n',
-        )
+        message_full_name = path + message.name
 
         for nested_type in message.nested_type:
             if is_map_message(nested_type):
@@ -365,7 +359,8 @@ class ProtobufCodeGenerator:
         w('protox.define_fields(')
 
         with self._buffer.indent():
-            w(f'{path}{message.name},')
+            w(message_full_name, ',')
+
             for field in message.field:
                 field_kwargs = {
                     'number': field.number
@@ -436,28 +431,28 @@ class ProtobufCodeGenerator:
 
         w(')')
         w(
-            message.name,
+            message_full_name,
             f'.DESCRIPTOR = protox.DescriptorProto.from_bytes(',
             repr(message.to_bytes()),
             ')',
         )
         w(
-            message.name,
+            message_full_name,
             '.DESCRIPTOR.file_descriptor = FILE_DESCRIPTOR',
         )
 
         package = self._proto_file.package
 
         if package:
-            message_full_name = package.lstrip('.') + '.' + message.name
+            qualified_message_name = package.lstrip('.') + '.' + message.name
         else:
-            message_full_name = message.name
+            qualified_message_name = message.name
 
         w(
-            message.name,
+            message_full_name,
             '.DESCRIPTOR.full_name = ',
             "'",
-            message_full_name,
+            qualified_message_name,
             "'",
             '\n'
         )
@@ -474,6 +469,13 @@ class ProtobufCodeGenerator:
         for message_type in self._proto_file.message_type:
             self.write_message(message_type)
             nl(2)
+
+        self._buffer.write(
+            'FILE_DESCRIPTOR = protox.FileDescriptorProto.from_bytes(',
+            repr(self._proto_file.to_bytes()),
+            ')',
+            '\n',
+        )
 
         # message fields
         for message_type in self._proto_file.message_type:
