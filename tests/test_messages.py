@@ -73,7 +73,7 @@ def test_optional_fields():
     assert message.y == expected_message.y
 
 
-def test_optional_with_default():
+def test_default_value():
     default_value = 777
 
     class MyMessage(Message):
@@ -82,11 +82,14 @@ def test_optional_with_default():
 
     message = MyMessage()
 
-    assert message.x is None
     assert not message.has_field('x')
+    assert message.x is None
 
+    assert not message.has_field('y')
+    assert message.y == default_value
+
+    message.y = default_value
     assert message.has_field('y')
-    assert message.y is default_value
 
 
 def test_embedded_message():

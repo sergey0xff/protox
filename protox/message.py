@@ -350,7 +350,7 @@ class Message(metaclass=MessageMeta):
 
     def has_field(self, name: str) -> bool:
         """
-        has_field checks if field was explicitly set
+        Checks if field was explicitly set
 
         :raises:
             AttributeError: if message has no such field
@@ -360,7 +360,7 @@ class Message(metaclass=MessageMeta):
                 f"Protocol message {type(self).__qualname__} has no such field {name!r}"
             )
 
-        return super().__getattribute__(name) is not None
+        return name in self._data
 
     def which_one_of(self, one_of_name: str) -> Optional[str]:
         if one_of_name not in self._one_ofs:
