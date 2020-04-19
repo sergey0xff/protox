@@ -47,7 +47,7 @@ def test_loads(simple_message, simple_message_encoded):
     assert message.x == 1
 
 
-def test_default_value():
+def test_default_value_encoding():
     class MyMessage(Message):
         x = Int32(number=1, default=100)
         y = Int32(number=2)

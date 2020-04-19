@@ -3,7 +3,8 @@ from typing import Dict, Tuple
 from protox import FileDescriptorProto, DescriptorProto, FieldDescriptorProto, EnumDescriptorProto
 from protox.plugin.common import StringBuffer, FieldMangler, is_well_known_type_field, is_enum_field, \
     PROTOBUF_FILE_POSTFIX, is_message_field, is_repeated, is_map_message, pb_to_protox_type, is_group_field, \
-    pb_to_py_type, is_optional, is_empty_message, collect_one_of, pythonize_default_value, fix_redundant_newlines
+    pb_to_py_type, is_optional, is_empty_message, collect_one_of, pythonize_default_value, fix_redundant_newlines, \
+    pb_type_to_zero_value
 from protox.plugin.index import Index
 from protox.well_known_types.plugin import CodeGeneratorResponse
 
@@ -23,6 +24,10 @@ class ProtobufCodeGenerator:
         self._buffer = StringBuffer()
         self._import_buffer = StringBuffer()
         self._field_manglers: Dict[str, FieldMangler] = {}
+
+    @property
+    def is_proto3(self) -> bool:
+        return self._proto_file.syntax == 'proto3'
 
     @property
     def proto_file(self):
@@ -387,6 +392,8 @@ class ProtobufCodeGenerator:
 
                     if field.default_value:
                         field_kwargs['default'] = py_enum + '.' + field.default_value
+                    elif self.is_proto3:
+                        field_kwargs['default'] = 0
                 elif is_group_field(field):
                     raise NotImplementedError(
                         'Groups are not supported yet'
@@ -398,6 +405,10 @@ class ProtobufCodeGenerator:
                         field_kwargs['default'] = pythonize_default_value(
                             field.default_value,
                             field.type,
+                        )
+                    elif self.is_proto3:
+                        field_kwargs['default'] = pb_type_to_zero_value(
+                            field.type
                         )
 
                 if self.is_map_field(field):

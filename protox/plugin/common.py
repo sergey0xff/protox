@@ -1,7 +1,7 @@
 import re
 from collections import Counter
 from contextlib import contextmanager
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from protox import DescriptorProto, FieldDescriptorProto, Message
 
@@ -125,6 +125,33 @@ def pb_to_py_type(pb_type: FieldDescriptorProto.Type) -> str:
 
         fd.TYPE_BOOL: 'bool',
         fd.TYPE_ENUM: 'enum.IntEnum',
+    }[pb_type]
+
+
+def pb_type_to_zero_value(
+    pb_type: FieldDescriptorProto.Type
+) -> Union[int, float, str, bool, bytes]:
+    fd = FieldDescriptorProto.Type
+
+    return {
+        fd.TYPE_DOUBLE: 0.0,
+        fd.TYPE_FLOAT: 0.0,
+
+        fd.TYPE_INT64: 0,
+        fd.TYPE_UINT64: 0,
+        fd.TYPE_INT32: 0,
+        fd.TYPE_UINT32: 0,
+        fd.TYPE_FIXED64: 0,
+        fd.TYPE_FIXED32: 0,
+        fd.TYPE_SFIXED32: 0,
+        fd.TYPE_SFIXED64: 0,
+        fd.TYPE_SINT32: 0,
+        fd.TYPE_SINT64: 0,
+
+        fd.TYPE_STRING: "''",
+        fd.TYPE_BYTES: "b''",
+
+        fd.TYPE_BOOL: 'False',
     }[pb_type]
 
 

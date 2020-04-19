@@ -2,6 +2,8 @@ import json
 from enum import IntEnum
 from typing import Dict, List, Iterable, Union, MutableMapping, Iterator
 
+from protox.message import MessageMeta
+
 from protox import Message, fields, one_of, define_fields
 
 PyValue_T = Union[
@@ -15,11 +17,9 @@ PyValue_T = Union[
 ]
 
 
-class Struct(
-    Message,
-    MutableMapping
-):
+class Struct(Message, MutableMapping):
     _fields: Dict[str, 'Value']
+    __metaclass__ = MessageMeta
 
     def __init__(self, initial_value: Dict[str, PyValue_T] = None, **kwargs):
         super().__init__()
