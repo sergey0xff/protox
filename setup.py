@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='protox',
-    version='0.1.6',
+    version='0.1.7',
     description='Protobuf for humans',
     long_description=open('README.md', 'r').read(),
     long_description_content_type='text/markdown',
