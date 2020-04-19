@@ -1,10 +1,10 @@
 import json
 from enum import IntEnum
-from typing import Dict, List, Iterable, Union, MutableMapping, Iterator
-
-from protox.message import MessageMeta
+from typing import Dict, List, Iterable, Union, Iterator, BinaryIO
 
 from protox import Message, fields, one_of, define_fields
+from protox.encoding import decode_header
+from protox.exceptions import MessageDecodeError
 
 PyValue_T = Union[
     type(None),
@@ -17,16 +17,11 @@ PyValue_T = Union[
 ]
 
 
-class Struct(Message, MutableMapping):
+class Struct(Message):
     _fields: Dict[str, 'Value']
-    __metaclass__ = MessageMeta
 
-    def __init__(self, initial_value: Dict[str, PyValue_T] = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__()
-
-        if isinstance(initial_value, Dict):
-            for key, value in initial_value.items():
-                self[key] = value
 
         for key, value in kwargs.items():
             self[key] = value
@@ -49,6 +44,12 @@ class Struct(Message, MutableMapping):
     def __iter__(self) -> Iterator[PyValue_T]:
         return iter(self._fields)
 
+    def __eq__(self, other: 'Struct') -> bool:
+        return self._fields == other._fields
+
+    def set_value(self, key: str, value: 'Value'):
+        self._fields[key] = value
+
     def to_python(self) -> PyValue_T:
         return {
             key: value.to_python()
@@ -57,7 +58,24 @@ class Struct(Message, MutableMapping):
 
     @classmethod
     def from_python(cls, value: dict) -> 'Struct':
-        return Struct(value)
+        return Struct(**value)
+
+    @classmethod
+    def from_stream(cls, stream: BinaryIO) -> 'Struct':
+        rv = cls()
+        map_field = cls._field_by_number[1]
+
+        while True:
+            # checking for end of message
+            try:
+                decode_header(stream)
+            except MessageDecodeError:
+                break
+
+            key, value = map_field.decode(stream)
+            rv.set_value(key, value)
+
+        return rv
 
 
 class NullValue(IntEnum):
@@ -82,7 +100,7 @@ class Value(Message):
     )
 
     @classmethod
-    def from_python(cls, value) -> 'Value':
+    def from_python(cls, value: PyValue_T) -> 'Value':
         if value is None:
             return Value(
                 null_value=NullValue.NULL_VALUE
