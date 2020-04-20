@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package test.proto3;
+
+message PrimitiveValues {
+    int32 i32 = 1;
+    uint32 u32 = 2;
+
+    int64 i64 = 3;
+    uint64 u64 = 4;
+
+    sint32 si32 = 5;
+    sint64 si64 = 6;
+
+    fixed32 fi32 = 7;
+    fixed64 fi64 = 8;
+
+    sfixed32 sfi32 = 9;
+    sfixed64 sfi64 = 10;
+
+    float f32 = 11;
+    float f64 = 12;
+
+    string s = 13;
+    bytes b = 14;
+    bool boolean = 15;
+}
+
+message RepeatedPrimitiveValues {
+    repeated int32 i32 = 1;
+    repeated uint32 u32 = 2;
+
+    repeated int64 i64 = 3;
+    repeated uint64 u64 = 4;
+
+    repeated sint32 si32 = 5;
+    repeated sint64 si64 = 6;
+
+    repeated fixed32 fi32 = 7;
+    repeated fixed64 fi64 = 8;
+
+    repeated sfixed32 sfi32 = 9;
+    repeated sfixed64 sfi64 = 10;
+
+    repeated float f32 = 11;
+    repeated float f64 = 12;
+
+    repeated string s = 13;
+    repeated bytes b = 14;
+    repeated bool boolean = 15;
+}

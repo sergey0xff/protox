@@ -1,0 +1,31 @@
+syntax = "proto2";
+
+import "google/protobuf/empty.proto";
+
+package nested.message;
+
+message TopLevel {
+    message SecondLevel {
+        message ThirdLevel {
+        }
+
+        required ThirdLevel third = 1;
+    }
+
+    required SecondLevel second = 1;
+    required SecondLevel.ThirdLevel third = 2;
+}
+
+message RepeatedMessage {
+    message User {
+    }
+
+    repeated User users = 1;
+}
+
+message OneOfMessage {
+    oneof status {
+        string x = 1;
+        google.protobuf.Empty empty = 2;
+    }
+}

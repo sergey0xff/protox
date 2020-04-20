@@ -392,7 +392,7 @@ class ProtobufCodeGenerator:
 
                     if field.default_value:
                         field_kwargs['default'] = py_enum + '.' + field.default_value
-                    elif self.is_proto3:
+                    elif self.is_proto3 and not is_repeated(field):
                         field_kwargs['default'] = 0
                 elif is_group_field(field):
                     raise NotImplementedError(
@@ -406,7 +406,7 @@ class ProtobufCodeGenerator:
                             field.default_value,
                             field.type,
                         )
-                    elif self.is_proto3:
+                    elif self.is_proto3 and not is_repeated(field):
                         field_kwargs['default'] = pb_type_to_zero_value(
                             field.type
                         )

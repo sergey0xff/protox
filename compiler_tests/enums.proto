@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+enum Color {
+    RED = 1;
+    GREEN = 2;
+    BLUE = 3;
+}
+
+message Hello {
+    enum Color {
+        RED = 1;
+        GREEN = 2;
+        BLUE = 3;
+    }
+
+    required Color a = 1;
+    required Hello.Color b = 2;
+    required Hello.Color default_enum = 3 [default = RED];
+
+    repeated Color repeated_enum = 4;
+
+    optional Color optional_enum = 5;
+    optional Color optional_default_enum = 6 [default = RED];
+}

@@ -1,0 +1,119 @@
+syntax = "proto2";
+
+message PrimitiveValues {
+    required int32 i32 = 1;
+    required uint32 u32 = 2;
+
+    required int64 i64 = 3;
+    required uint64 u64 = 4;
+
+    required sint32 si32 = 5;
+    required sint64 si64 = 6;
+
+    required fixed32 fi32 = 7;
+    required fixed64 fi64 = 8;
+
+    required sfixed32 sfi32 = 9;
+    required sfixed64 sfi64 = 10;
+
+    required float f32 = 11;
+    required float f64 = 12;
+
+    required string s = 13;
+    required bytes b = 14;
+    required bool boolean = 15;
+}
+
+message OptionalPrimitiveValues {
+    optional int32 i32 = 1;
+    optional uint32 u32 = 2;
+
+    optional int64 i64 = 3;
+    optional uint64 u64 = 4;
+
+    optional sint32 si32 = 5;
+    optional sint64 si64 = 6;
+
+    optional fixed32 fi32 = 7;
+    optional fixed64 fi64 = 8;
+
+    optional sfixed32 sfi32 = 9;
+    optional sfixed64 sfi64 = 10;
+
+    optional float f32 = 11;
+    optional float f64 = 12;
+
+    optional string s = 13;
+    optional bytes b = 14;
+    optional bool boolean = 15;
+}
+
+message OptionalDefaultPrimitiveValues {
+    optional int32 i32 = 1 [default = 0];
+    optional uint32 u32 = 2 [default = 0];
+
+    optional int64 i64 = 3 [default = 0];
+    optional uint64 u64 = 4 [default = 0];
+
+    optional sint32 si32 = 5 [default = 0];
+    optional sint64 si64 = 6 [default = 0];
+
+    optional fixed32 fi32 = 7 [default = 0];
+    optional fixed64 fi64 = 8 [default = 0];
+
+    optional sfixed32 sfi32 = 9 [default = 0];
+    optional sfixed64 sfi64 = 10 [default = 0];
+
+    optional float f32 = 11 [default = 0.0];
+    optional float f64 = 12 [default = 0.0];
+
+    optional string s = 13 [default = ""];
+    optional bytes b = 14 [default = ""];
+    optional bool boolean = 15 [default = false];
+}
+
+
+message RepeatedPrimitiveValues {
+    repeated int32 i32 = 1;
+    repeated uint32 u32 = 2;
+
+    repeated int64 i64 = 3;
+    repeated uint64 u64 = 4;
+
+    repeated sint32 si32 = 5;
+    repeated sint64 si64 = 6;
+
+    repeated fixed32 fi32 = 7;
+    repeated fixed64 fi64 = 8;
+
+    repeated sfixed32 sfi32 = 9;
+    repeated sfixed64 sfi64 = 10;
+
+    repeated float f32 = 11;
+    repeated float f64 = 12;
+
+    repeated string s = 13;
+    repeated bytes b = 14;
+    repeated bool boolean = 15;
+}
+
+message RepeatedPackedPrimitiveValues {
+    repeated int32 i32 = 1 [packed=true];
+    repeated uint32 u32 = 2 [packed=true];
+
+    repeated int64 i64 = 3 [packed=true];
+    repeated uint64 u64 = 4 [packed=true];
+
+    repeated sint32 si32 = 5 [packed=true];
+    repeated sint64 si64 = 6 [packed=true];
+
+    repeated fixed32 fi32 = 7 [packed=true];
+    repeated fixed64 fi64 = 8 [packed=true];
+
+    repeated sfixed32 sfi32 = 9 [packed=true];
+    repeated sfixed64 sfi64 = 10 [packed=true];
+
+    repeated float f32 = 11 [packed=true];
+    repeated float f64 = 12 [packed=true];
+    repeated bool boolean = 13 [packed=true];
+}

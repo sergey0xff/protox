@@ -1,4 +1,4 @@
-import json
+from collections import UserDict
 from enum import IntEnum
 from typing import Dict, List, Iterable, Union, Iterator, BinaryIO
 
@@ -17,17 +17,17 @@ PyValue_T = Union[
 ]
 
 
-class Struct(Message):
+class Struct(Message, UserDict):
     _fields: Dict[str, 'Value']
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: PyValue_T):
         super().__init__()
 
         for key, value in kwargs.items():
             self[key] = value
 
-    def __str__(self):
-        return f'Struct {json.dumps(self.to_python(), indent=2, ensure_ascii=False)}'
+    def __contains__(self, item):
+        return item in self._fields
 
     def __setitem__(self, key: str, value: PyValue_T):
         self._fields[key] = Value.from_python(value)
@@ -45,12 +45,26 @@ class Struct(Message):
         return iter(self._fields)
 
     def __eq__(self, other: 'Struct') -> bool:
+        if not isinstance(other, Struct):
+            return False
+
         return self._fields == other._fields
+
+    def _format(self, buffer: list = None, indent_level=0) -> str:
+        buffer = buffer or []
+
+        if indent_level == 0:
+            buffer.append(f"message {type(self).__name__}")
+
+        for key, value in self.items():
+            self._format_value(key, value, buffer, indent_level + 1)
+
+        return '\n'.join(buffer)
 
     def set_value(self, key: str, value: 'Value'):
         self._fields[key] = value
 
-    def to_python(self) -> PyValue_T:
+    def to_python(self) -> Dict[str, PyValue_T]:
         return {
             key: value.to_python()
             for key, value in self._fields.items()

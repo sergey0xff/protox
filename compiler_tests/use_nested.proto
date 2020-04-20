@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+import "nested/module/user.proto";
+
+message Payload {
+    required nested.module.User user = 1;
+}

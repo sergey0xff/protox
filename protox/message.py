@@ -374,11 +374,14 @@ class Message(metaclass=MessageMeta):
             return None
 
     def is_empty(self) -> bool:
+        """
+        Returns False if at least one field was explicitly set
+        """
         return not bool(self._data)
 
     def is_initialized(self) -> bool:
         """
-        Checks if all required fields are set
+        Returns True if all required fields are set
         """
         for name, field in self._field_by_name.items():
             if field.required and name not in self._data:
@@ -442,10 +445,8 @@ class Message(metaclass=MessageMeta):
         if indent_level == 0:
             buffer.append(f"message {type(self).__name__}")
 
-        indent_level += 1
-
         for key, value in self._data.items():
-            self._format_value(key, value, buffer, indent_level)
+            self._format_value(key, value, buffer, indent_level + 1)
 
         return '\n'.join(buffer)
 
