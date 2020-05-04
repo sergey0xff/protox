@@ -196,7 +196,13 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
 
 
 class Repeated(Field):
-    def __init__(self, of_type: Type, *, number: int, packed: bool = False):
+    def __init__(
+        self,
+        of_type: Type,
+        *,
+        number: int,
+        packed: bool = False
+    ):
         from .message import Message
 
         if issubclass(of_type, Message):
@@ -211,7 +217,7 @@ class Repeated(Field):
             self._field = of_type(number=number)
 
         self._of_type = of_type
-        self._packed = packed
+        self._packed: bool = packed
         self._strategy: BaseRepeatedStrategy
 
         if packed:
@@ -684,7 +690,7 @@ class MessageField(Field):
         self,
         of_type,
         *,
-        number,
+        number: int,
         default=None,
         required=False,
     ):

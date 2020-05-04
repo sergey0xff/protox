@@ -217,13 +217,13 @@ T = TypeVar('T')
 
 
 class Message(metaclass=MessageMeta):
-    # The following fields are set by metaclass
-    _field_by_name: Dict[str, Union[Field, Repeated]] = ...
-    _field_by_number: Dict[int, Union[Field, Repeated]] = ...
-    _one_of_by_field_name: dict = ...
+    # The following fields provided by metaclass
+    _field_by_name: Dict[str, Union[Field, Repeated]] = None
+    _field_by_number: Dict[int, Union[Field, Repeated]] = None
+    _one_of_by_field_name: dict = None
 
     # Provided by code generator
-    DESCRIPTOR = ...
+    DESCRIPTOR = None
 
     _to_python: Optional[Callable] = None
     _from_python: Optional[Callable] = None

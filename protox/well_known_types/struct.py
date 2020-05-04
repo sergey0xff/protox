@@ -1,6 +1,5 @@
-from collections import UserDict
 from enum import IntEnum
-from typing import Dict, List, Iterable, Union, Iterator, BinaryIO
+from typing import Dict, List, Iterable, Union, Iterator, BinaryIO, MutableMapping
 
 from protox import Message, fields, one_of, define_fields
 from protox.encoding import decode_header
@@ -17,7 +16,7 @@ PyValue_T = Union[
 ]
 
 
-class Struct(Message, UserDict):
+class Struct(Message, MutableMapping):
     _fields: Dict[str, 'Value']
 
     def __init__(self, **kwargs: PyValue_T):
@@ -62,6 +61,12 @@ class Struct(Message, UserDict):
         return '\n'.join(buffer)
 
     def set_value(self, key: str, value: 'Value'):
+        if not isinstance(value, Value):
+            raise ValueError(
+                "Expected a value of type 'Value', "
+                f"got value of type {type(value).__name__!r} instead"
+            )
+
         self._fields[key] = value
 
     def to_python(self) -> Dict[str, PyValue_T]:
