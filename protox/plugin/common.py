@@ -56,6 +56,9 @@ RESERVED_NAMES = {
 
     'IntEnum',
 
+    # protox.Message special names
+    '__message_type__',
+
     *MESSAGE_PROPS,
 }
 PROTOBUF_FILE_POSTFIX = '_pb'

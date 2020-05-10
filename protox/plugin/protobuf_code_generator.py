@@ -245,7 +245,6 @@ class ProtobufCodeGenerator:
             if self.write_oneofs(message):
                 nl()
 
-            w(f'DESCRIPTOR: protox.DescriptorProto')
             nl()
 
             self.write_init(message)

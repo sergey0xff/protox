@@ -9,6 +9,9 @@ from protox.fields import Field, OneOf, Repeated, MessageField, MapField
 from protox.validated_dict import ValidatedDict
 from protox.validated_list import ValidatedList
 
+if False:
+    from protox.well_known_types.descriptor import DescriptorProto  # noqa
+
 __all__ = [
     'Message',
     'define_fields',
@@ -148,8 +151,11 @@ def define_fields(
 
 class MessageMeta(ABCMeta):
     def __new__(mcs, name, bases, namespace):
-        new_cls: Type[Message] = super().__new__(
-            mcs, name, bases, namespace
+        new_cls = super().__new__(
+            mcs,
+            name,
+            bases,
+            namespace,
         )
 
         if name != 'Message':
@@ -223,7 +229,7 @@ class Message(metaclass=MessageMeta):
     _one_of_by_field_name: dict = None
 
     # Provided by code generator
-    DESCRIPTOR = None
+    DESCRIPTOR: 'DescriptorProto' = None
 
     _to_python: Optional[Callable] = None
     _from_python: Optional[Callable] = None

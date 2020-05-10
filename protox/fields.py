@@ -14,6 +14,9 @@ from protox.encoding import (
 )
 from protox.exceptions import MessageDecodeError, FieldValidationError
 
+if False:
+    from protox.message import Message  # noqa
+
 __all__ = [
     'WireType',
     'Field',
@@ -427,7 +430,7 @@ class EnumField(Field):
             required=required,
         )
 
-        self._py_enum = py_enum
+        self._py_enum: Type[enum.IntEnum] = py_enum
 
     def encode_value(self, value: int) -> bytes:
         return encode_varint(value)
@@ -435,18 +438,19 @@ class EnumField(Field):
     def decode(self, stream: IO) -> Optional[int]:
         value = decode_varint(stream)
 
-        # Specifications: omit value that's not in the enum's variants
-        if value in list(self._py_enum):
+        # Specification: omit value that's not in the enum's variants
+        try:
             return self._py_enum(value)
-
-        return None
+        except ValueError:
+            return None
 
     def validate_value(self, value: int):
-        valid_values = [int(x) for x in self._py_enum]
-
-        if value not in valid_values:
+        try:
+            self._py_enum(value)
+        except ValueError:
             raise ValueError(
-                f'Expected an enum value of {repr(valid_values)}, got {value} instead'
+                f'Expected an enum value of {repr([x for x in self._py_enum])}, '
+                f'got {value} instead'
             )
 
     @staticmethod
