@@ -17,10 +17,11 @@ message PrimitiveValues {
     required sfixed64 sfi64 = 10;
 
     required float f32 = 11;
-    required float f64 = 12;
+    required double f64 = 12;
 
     required string s = 13;
     required bytes b = 14;
+
     required bool boolean = 15;
 }
 
@@ -41,10 +42,11 @@ message OptionalPrimitiveValues {
     optional sfixed64 sfi64 = 10;
 
     optional float f32 = 11;
-    optional float f64 = 12;
+    optional double f64 = 12;
 
     optional string s = 13;
     optional bytes b = 14;
+
     optional bool boolean = 15;
 }
 
@@ -65,10 +67,11 @@ message OptionalDefaultPrimitiveValues {
     optional sfixed64 sfi64 = 10 [default = 0];
 
     optional float f32 = 11 [default = 0.0];
-    optional float f64 = 12 [default = 0.0];
+    optional double f64 = 12 [default = 0.0];
 
     optional string s = 13 [default = ""];
     optional bytes b = 14 [default = ""];
+
     optional bool boolean = 15 [default = false];
 }
 
@@ -90,10 +93,11 @@ message RepeatedPrimitiveValues {
     repeated sfixed64 sfi64 = 10;
 
     repeated float f32 = 11;
-    repeated float f64 = 12;
+    repeated double f64 = 12;
 
     repeated string s = 13;
     repeated bytes b = 14;
+
     repeated bool boolean = 15;
 }
 
@@ -114,6 +118,7 @@ message RepeatedPackedPrimitiveValues {
     repeated sfixed64 sfi64 = 10 [packed=true];
 
     repeated float f32 = 11 [packed=true];
-    repeated float f64 = 12 [packed=true];
+    repeated double f64 = 12 [packed=true];
+
     repeated bool boolean = 13 [packed=true];
 }

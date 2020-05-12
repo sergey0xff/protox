@@ -41,6 +41,9 @@ __all__ = [
     'OneOf',
     'one_of',
     'MapField',
+
+    'field_type_by_name',
+    'field_types',
 ]
 
 
@@ -201,7 +204,7 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
 class Repeated(Field):
     def __init__(
         self,
-        of_type: Type,
+        of_type: Union[Type['Message'], Type[enum.IntEnum], Type[Field]],
         *,
         number: int,
         packed: bool = False
@@ -736,7 +739,7 @@ class OneOf:
 
 one_of = OneOf
 
-field_by_name: Dict[str, Field] = {
+field_type_by_name: Dict[str, Field] = {
     'int32': Int32,
     'int64': Int64,
     'sint32': SInt32,
@@ -755,4 +758,4 @@ field_by_name: Dict[str, Field] = {
     'enum': EnumField,
 }
 
-fields: List[Field] = list(field_by_name.values())
+field_types: List[Field] = list(field_type_by_name.values())

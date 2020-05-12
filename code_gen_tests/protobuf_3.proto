@@ -19,7 +19,7 @@ message PrimitiveValues {
     sfixed64 sfi64 = 10;
 
     float f32 = 11;
-    float f64 = 12;
+    double f64 = 12;
 
     string s = 13;
     bytes b = 14;
@@ -43,7 +43,7 @@ message RepeatedPrimitiveValues {
     repeated sfixed64 sfi64 = 10;
 
     repeated float f32 = 11;
-    repeated float f64 = 12;
+    repeated double f64 = 12;
 
     repeated string s = 13;
     repeated bytes b = 14;
