@@ -288,7 +288,7 @@ class TestOneOf:
 
     def test_required_field(self):
         with pytest.raises(FieldValidationError):
-            class OneOfMessage(Message):
+            class _(Message):
                 x: int = Int32(number=1, required=True)
                 y: int = Int32(number=2, required=False)
 
@@ -334,19 +334,19 @@ def test_field_number_validation():
 
 def test_field_default_value_validation():
     with pytest.raises(FieldValidationError):
-        class Point(Message):
+        class _(Message):
             x = Int32(number=1, default="123")
 
 
 def test_one_of_with_zero_fields():
     with pytest.raises(FieldValidationError):
-        class Point(Message):
+        class _(Message):
             number = one_of()
 
 
 def test_one_of_with_one_field():
     with pytest.raises(FieldValidationError):
-        class Point(Message):
+        class _(Message):
             x = Int32(number=1, required=False)
             number = one_of('x')
 
@@ -356,11 +356,9 @@ def test_message_as_field():
         x = Int32(number=1)
 
     number = 1
-    required = False
-    message_field = SimpleMessage.as_field(number=number, required=required)
+    message_field = SimpleMessage.as_field(number=number)
     assert isinstance(message_field, MessageField)
     assert message_field.number == number
-    assert message_field.required is required
 
 
 def test_message_as_repeated():

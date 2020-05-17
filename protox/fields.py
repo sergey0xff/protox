@@ -56,31 +56,27 @@ class WireType(enum.IntEnum):
     FIXED_32 = 5
 
 
+def _validate_field_number(number):
+    if number not in range(1, 2 ** 29) or number in range(19_000, 20_000):
+        raise FieldValidationError(
+            'Field number {} is invalid. '
+            'A valid field number should be in range [1..2 ** 29 -1] '
+            'excluding range [19_000..19_999] '
+            'which is reserved for the protobuf implementation'
+        )
+
+
 class Field(ABC):
-    wire_type: WireType  # should be provided by subclasses
+    wire_type: WireType  # provided by subclasses
+    number: int
+    header: bytes
 
-    def __init__(self, *, number: int, default=None, required: bool = False):
-        self._validate_field_number(number)
-
-        self._number = number
-        self._required = required
-        self._header = encode_varint(self.number << 3 | self.wire_type)
-        self._default = default
-
-        # the name of the field is set by message because it's known in the message
+    def __init__(self, *, number: int):
+        _validate_field_number(number)
+        self.number = number
+        self.header = encode_varint(self.number << 3 | self.wire_type)
+        # name is set when adding the field to the message
         self.name: Optional[str] = None
-
-    @property
-    def number(self):
-        return self._number
-
-    @property
-    def default(self):
-        return self._default
-
-    @property
-    def required(self):
-        return self._required
 
     @abstractmethod
     def encode_value(self, value) -> bytes:
@@ -100,27 +96,31 @@ class Field(ABC):
     def validate_value(self, value):
         raise NotImplementedError()
 
-    @property
-    def header(self) -> bytes:
-        return self._header
+
+class PrimitiveField(Field, ABC):
+    def __init__(
+        self,
+        *,
+        number: int,
+        default=None,
+        required=False,
+    ):
+        super().__init__(number=number)
+        self.default = default
+        self.required = required
 
     @classmethod
-    def as_repeated(cls, *, number: int, packed: bool = False) -> 'Repeated':
+    def as_repeated(
+        cls,
+        *,
+        number: int,
+        packed: bool = False,
+    ) -> 'Repeated':
         return Repeated(
             of_type=cls,
             number=number,
             packed=packed,
         )
-
-    @staticmethod
-    def _validate_field_number(number):
-        if number not in range(1, 2 ** 29) or number in range(19_000, 20_000):
-            raise FieldValidationError(
-                'Field number {} is invalid. '
-                'A valid field number should be in range [1..2 ** 29 -1] '
-                'excluding range [19_000..19_999] '
-                'which is reserved for the protobuf implementation'
-            )
 
 
 class BaseRepeatedStrategy(ABC):
@@ -235,12 +235,6 @@ class Repeated(Field):
 
         super().__init__(number=number)
 
-    @classmethod
-    def as_repeated(cls, *, number: int, packed: bool = False) -> 'Repeated':
-        raise Exception(
-            'Cannot created repeated from repeated'
-        )
-
     @property
     def field(self):
         return self._field
@@ -272,7 +266,7 @@ class Repeated(Field):
             self._field.validate_value(value)
 
 
-class Int(Field):
+class Int(PrimitiveField):
     min_value: int
     max_value: int
     wire_type = WireType.VARINT
@@ -360,7 +354,7 @@ class SInt64(SInt):
         return encode_varint(zig_zag_value)
 
 
-class Bytes(Field):
+class Bytes(PrimitiveField):
     wire_type = WireType.LENGTH
 
     def encode_value(self, value: bytes) -> bytes:
@@ -377,7 +371,7 @@ class Bytes(Field):
             )
 
 
-class String(Field):
+class String(PrimitiveField):
     wire_type = WireType.LENGTH
 
     def encode_value(self, value: str) -> bytes:
@@ -396,7 +390,7 @@ class String(Field):
             )
 
 
-class Bool(Field):
+class Bool(PrimitiveField):
     wire_type = WireType.VARINT
 
     def encode_value(self, value: bool) -> bytes:
@@ -414,7 +408,7 @@ class Bool(Field):
             )
 
 
-class EnumField(Field):
+class EnumField(PrimitiveField):
     wire_type = WireType.VARINT
 
     def __init__(
@@ -546,7 +540,7 @@ class SFixed64(Int):
         return struct.unpack('<q', data)[0]
 
 
-class Float(Field):
+class Float(PrimitiveField):
     max_value = MAX_FLOAT
     wire_type = WireType.FIXED_32
 
@@ -623,8 +617,8 @@ class MapField(Field):
 
     def __init__(
         self,
-        key: Type[Field],
-        value: Union[Type[Field], Type[enum.IntEnum], Type['Message']],
+        key: Union[Type[Int], Type[String]],
+        value: Union[Type[PrimitiveField], Type[enum.IntEnum], Type['Message']],
         *,
         number: int
     ):
@@ -640,7 +634,7 @@ class MapField(Field):
         from protox import Message
 
         if issubclass(value, Message):
-            value_field = value.as_field(number=2, required=True)
+            value_field = value.as_field(number=2)
         elif issubclass(value, enum.IntEnum):
             value_field = EnumField(number=2, required=True, py_enum=value)
         else:
@@ -650,24 +644,16 @@ class MapField(Field):
             key = key_field
             value = value_field
 
-        self._dict_entry = _DictEntry
-        self._key_field = key_field
-        self._value_field = value_field
-
-    @property
-    def key_field(self) -> Field:
-        return self._key_field
-
-    @property
-    def value_field(self) -> Field:
-        return self._value_field
+        self.dict_entry = _DictEntry
+        self.key_field = key_field
+        self.value_field = value_field
 
     def encode_value(self, value: Dict) -> bytes:
         buffer = bytearray()
 
         for key, value in value.items():
             buffer += self.header + encode_bytes(
-                self._dict_entry(
+                self.dict_entry(
                     key=key,
                     value=value
                 ).to_bytes()
@@ -678,7 +664,7 @@ class MapField(Field):
     encode = encode_value
 
     def decode(self, stream: BinaryIO) -> Tuple:
-        entry = self._dict_entry.from_bytes(
+        entry = self.dict_entry.from_bytes(
             decode_bytes(stream)
         )
         return entry.key, entry.value
@@ -693,19 +679,8 @@ class MapField(Field):
 class MessageField(Field):
     wire_type = WireType.LENGTH
 
-    def __init__(
-        self,
-        of_type,
-        *,
-        number: int,
-        default=None,
-        required=False,
-    ):
-        super().__init__(
-            number=number,
-            default=default,
-            required=required,
-        )
+    def __init__(self, of_type, *, number: int):
+        super().__init__(number=number)
         self._of_type = of_type
 
     def encode_value(self, value) -> bytes:

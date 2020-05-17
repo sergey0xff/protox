@@ -726,10 +726,10 @@ protox.define_fields(
         number=7
     ),
     options=FileOptions.as_field(
-        number=8, required=False
+        number=8
     ),
     source_code_info=SourceCodeInfo.as_field(
-        number=9, required=False
+        number=9
     ),
     syntax=protox.String(
         number=12, required=False
@@ -745,7 +745,7 @@ protox.define_fields(
         number=2, required=False
     ),
     options=ExtensionRangeOptions.as_field(
-        number=3, required=False
+        number=3
     ),
 )
 
@@ -783,7 +783,7 @@ protox.define_fields(
         number=8
     ),
     options=MessageOptions.as_field(
-        number=7, required=False
+        number=7
     ),
     reserved_range=DescriptorProto.ReservedRange.as_repeated(
         number=9
@@ -830,7 +830,7 @@ protox.define_fields(
         number=10, required=False
     ),
     options=FieldOptions.as_field(
-        number=8, required=False
+        number=8
     ),
 )
 
@@ -840,17 +840,17 @@ protox.define_fields(
         number=1, required=False
     ),
     options=OneofOptions.as_field(
-        number=2, required=False
+        number=2
     ),
 )
 
 protox.define_fields(
     EnumDescriptorProto.EnumReservedRange,
     start=protox.Int32(
-        number=1, required=False
+        number=1
     ),
     end=protox.Int32(
-        number=2, required=False
+        number=2
     ),
 )
 
@@ -863,7 +863,7 @@ protox.define_fields(
         number=2
     ),
     options=EnumOptions.as_field(
-        number=3, required=False
+        number=3
     ),
     reserved_range=EnumDescriptorProto.EnumReservedRange.as_repeated(
         number=4
@@ -882,7 +882,7 @@ protox.define_fields(
         number=2, required=False
     ),
     options=EnumValueOptions.as_field(
-        number=3, required=False
+        number=3
     ),
 )
 
@@ -895,7 +895,7 @@ protox.define_fields(
         number=2
     ),
     options=ServiceOptions.as_field(
-        number=3, required=False
+        number=3
     ),
 )
 
@@ -911,7 +911,7 @@ protox.define_fields(
         number=3, required=False
     ),
     options=MethodOptions.as_field(
-        number=4, required=False
+        number=4
     ),
     client_streaming=protox.Bool(
         number=5, default=False, required=False

@@ -5,7 +5,7 @@ from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Unio
 
 from protox.encoding import decode_header, wire_type_to_decoder
 from protox.exceptions import MessageEncodeError, MessageDecodeError, FieldValidationError
-from protox.fields import Field, OneOf, Repeated, MessageField, MapField
+from protox.fields import Field, OneOf, Repeated, MessageField, MapField, PrimitiveField
 from protox.validated_dict import ValidatedDict
 from protox.validated_list import ValidatedList
 
@@ -19,7 +19,7 @@ __all__ = [
 
 
 class FieldGetter:
-    def __init__(self, key, default):
+    def __init__(self, key: str, default=None):
         self._key = key
         self._default = default
 
@@ -104,11 +104,16 @@ def _add_field_to_message(
         field_getter = RepeatedGetter(name, field.field)
     elif isinstance(field, MapField):
         field_getter = MapGetter(name, field)
-    else:
+    elif isinstance(field, MessageField):
+        # TODO: probably replace with MessageGetter
+        field_getter = FieldGetter(name, None)
+    elif isinstance(field, PrimitiveField):
         field_getter = FieldGetter(name, field.default)
+    else:
+        raise Exception('Unreachable code')
 
     if name in message_type._one_of_by_field_name:
-        if field.required:
+        if getattr(field, 'required', False):
             raise FieldValidationError(
                 f'A one_of field {message_type.__name__}.{name} should be optional, not required!'
             )
@@ -206,7 +211,7 @@ class MessageMeta(ABCMeta):
 
                 field_numbers.add(value.number)
 
-                if value.default is not None:
+                if hasattr(value, 'default') and value.default is not None:
                     try:
                         value.validate_value(value.default)
                     except ValueError:
@@ -276,11 +281,10 @@ class Message(metaclass=MessageMeta):
         cls._from_python = fn
 
     @classmethod
-    def as_field(cls, *, number: int, required: bool = False) -> MessageField:
+    def as_field(cls, *, number: int) -> MessageField:
         return MessageField(
             cls,
-            number=number,
-            required=required
+            number=number
         )
 
     @classmethod
@@ -326,8 +330,10 @@ class Message(metaclass=MessageMeta):
                 # read and discard unknown field
                 wire_type_to_decoder[wire_type](stream)
 
+        # TODO: when adding field to Message if the field is required
+        #  put it to Message._required_fields to simplify the following check
         for key, field, in cls._field_by_name.items():
-            if field.required and not field.default and key not in message_fields:
+            if getattr(field, 'required', False) and not getattr(field, 'default', None) and key not in message_fields:
                 raise MessageDecodeError(
                     f"Field {cls.__name__}.{key} is required but was not read from input stream"
                 )
@@ -345,7 +351,8 @@ class Message(metaclass=MessageMeta):
             value = getattr(self, key)
 
             if value is None:
-                if field.required:
+                # TODO: replace with one `if` instead of nested
+                if getattr(field, 'required', False):
                     raise MessageEncodeError(
                         f'Field {type(self).__name__}.{key} is required but was not set'
                     )
@@ -390,7 +397,7 @@ class Message(metaclass=MessageMeta):
         Returns True if all required fields are set
         """
         for name, field in self._field_by_name.items():
-            if field.required and name not in self._data:
+            if getattr(field, 'required', False) and name not in self._data:
                 return False
 
         return True

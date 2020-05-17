@@ -1,4 +1,3 @@
-from enum import IntEnum
 from typing import Type, TypeVar, Any
 
 import protox
@@ -24,13 +23,17 @@ _field_type_to_value = {
 MessageT = TypeVar('MessageT', bound=protox.Message)
 
 
-def _mock_field(field) -> Any:
+def _mock_field(field: protox.Field) -> Any:
     if isinstance(field, protox.Repeated):
         return [_mock_field(field._field)] * 5
     elif isinstance(field, protox.EnumField):
         return list(field._py_enum)[0]
     elif isinstance(field, protox.MessageField):
         return mock_message(field._of_type)
+    elif isinstance(field, protox.MapField):
+        key = _mock_field(field.key_field)
+        value = _mock_field(field.value_field)
+        return {key: value}
     else:
         return _field_type_to_value[type(field)]
 

@@ -62,7 +62,7 @@ class PhoneNumber(Message):
 
 
 class User(Message):
-    phone_number: PhoneNumber = PhoneNumber.as_field(number=1, required=True)
+    phone_number: PhoneNumber = PhoneNumber.as_field(number=1)
 
 
 user = User()
@@ -152,8 +152,8 @@ class Node(Message):
 # to address recursive message definition and circular dependency problems
 define_fields(
     Node,
-    left=Node.as_field(number=2, required=False),
-    right=Node.as_field(number=3, required=False),
+    left=Node.as_field(number=2),
+    right=Node.as_field(number=3),
 )
 
 tree = Node(
@@ -188,7 +188,7 @@ class Response(Message):
     class Result(Message):
         message: str = String(number=1, required=True)
 
-    result: Result = Result.as_field(number=1, required=False)
+    result: Result = Result.as_field(number=1)
     error: Error = EnumField(Error, number=2, required=False)
 
     status = one_of(

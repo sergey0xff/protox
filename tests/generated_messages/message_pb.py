@@ -79,7 +79,7 @@ FILE_DESCRIPTOR = protox.FileDescriptorProto.from_bytes(b'\n\rmessage.proto\x12\
 protox.define_fields(
     TopLevel.SecondLevel,
     third=TopLevel.SecondLevel.ThirdLevel.as_field(
-        number=1, required=True
+        number=1
     ),
 )
 TopLevel.SecondLevel.DESCRIPTOR = protox.DescriptorProto.from_bytes(b'\n\x0bSecondLevel\x12E\n\x05third\x18\x01 \x02(\x0b2/.nested.message.TopLevel.SecondLevel.ThirdLevelR\x05third\x1a\x0c\n\nThirdLevel')
@@ -89,10 +89,10 @@ TopLevel.SecondLevel.DESCRIPTOR.full_name = 'nested.message.SecondLevel'
 protox.define_fields(
     TopLevel,
     second=TopLevel.SecondLevel.as_field(
-        number=1, required=True
+        number=1
     ),
     third=TopLevel.SecondLevel.ThirdLevel.as_field(
-        number=2, required=True
+        number=2
     ),
 )
 TopLevel.DESCRIPTOR = protox.DescriptorProto.from_bytes(b'\n\x08TopLevel\x12<\n\x06second\x18\x01 \x02(\x0b2$.nested.message.TopLevel.SecondLevelR\x06second\x12E\n\x05third\x18\x02 \x02(\x0b2/.nested.message.TopLevel.SecondLevel.ThirdLevelR\x05third\x1ab\n\x0bSecondLevel\x12E\n\x05third\x18\x01 \x02(\x0b2/.nested.message.TopLevel.SecondLevel.ThirdLevelR\x05third\x1a\x0c\n\nThirdLevel')
@@ -115,7 +115,7 @@ protox.define_fields(
         number=1, required=False
     ),
     empty=protox.Empty.as_field(
-        number=2, required=False
+        number=2
     ),
 )
 OneOfMessage.DESCRIPTOR = protox.DescriptorProto.from_bytes(b'\n\x0cOneOfMessage\x12\x0e\n\x01x\x18\x01 \x01(\tH\x00R\x01x\x12.\n\x05empty\x18\x02 \x01(\x0b2\x16.google.protobuf.EmptyH\x00R\x05emptyB\x08\n\x06status')

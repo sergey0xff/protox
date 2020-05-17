@@ -96,7 +96,7 @@ protox.define_fields(
         number=4, required=False
     ),
     source_context=protox.SourceContext.as_field(
-        number=5, required=False
+        number=5
     ),
     mixins=Mixin.as_repeated(
         number=6

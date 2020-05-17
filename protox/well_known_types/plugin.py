@@ -110,7 +110,7 @@ protox.define_fields(
         number=15
     ),
     compiler_version=Version.as_field(
-        number=3, required=False
+        number=3
     ),
 )
 

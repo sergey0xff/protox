@@ -181,7 +181,7 @@ protox.define_fields(
         number=4
     ),
     source_context=SourceContext.as_field(
-        number=5, required=False
+        number=5,
     ),
     syntax=protox.EnumField(
         number=6, py_enum=Syntax, required=False
@@ -234,7 +234,7 @@ protox.define_fields(
         number=3
     ),
     source_context=SourceContext.as_field(
-        number=4, required=False
+        number=4
     ),
     syntax=protox.EnumField(
         number=5, py_enum=Syntax, required=False
@@ -260,6 +260,6 @@ protox.define_fields(
         number=1, required=False
     ),
     value=Any.as_field(
-        number=2, required=False
+        number=2
     ),
 )
