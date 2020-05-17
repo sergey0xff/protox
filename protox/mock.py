@@ -25,11 +25,11 @@ MessageT = TypeVar('MessageT', bound=protox.Message)
 
 def _mock_field(field: protox.Field) -> Any:
     if isinstance(field, protox.Repeated):
-        return [_mock_field(field._field)] * 5
+        return [_mock_field(field.field)] * 5
     elif isinstance(field, protox.EnumField):
-        return list(field._py_enum)[0]
+        return list(field.py_enum)[0]
     elif isinstance(field, protox.MessageField):
-        return mock_message(field._of_type)
+        return mock_message(field.of_type)
     elif isinstance(field, protox.MapField):
         key = _mock_field(field.key_field)
         value = _mock_field(field.value_field)

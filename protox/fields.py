@@ -125,8 +125,9 @@ class PrimitiveField(Field, ABC):
 
 class BaseRepeatedStrategy(ABC):
     def __init__(self, field: Field, number: int):
-        self._field = field
-        self._number = number
+        self.field = field
+        self.number = number
+        self.header = encode_varint(self.field.number << 3 | WireType.LENGTH)
 
     @abstractmethod
     def encode(self, values: list) -> bytes:
@@ -147,10 +148,10 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
         data = bytearray()
 
         for item in values:
-            data += self._field.encode_value(item)
+            data += self.field.encode_value(item)
 
         return (
-            encode_varint(self._field.number << 3 | WireType.LENGTH) +
+            self.header +
             encode_bytes(data)
         )
 
@@ -169,7 +170,7 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
         stream = io.BytesIO(data)
 
         while stream.seek(0, io.SEEK_CUR) < length:
-            items.append(self._field.decode(stream))
+            items.append(self.field.decode(stream))
 
         return items
 
@@ -177,7 +178,7 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
 class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
     @property
     def wire_type(self):
-        return self._field.wire_type
+        return self.field.wire_type
 
     def encode(self, values: list) -> bytes:
         if not values:
@@ -186,7 +187,7 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
         data = bytearray()
 
         for item in values:
-            data += self._field.header + self._field.encode_value(item)
+            data += self.field.header + self.field.encode_value(item)
 
         return data
 
@@ -198,7 +199,7 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
 
         That's why we can only read exactly one item at a time
         """
-        return self._field.decode(stream)
+        return self.field.decode(stream)
 
 
 class Repeated(Field):
@@ -216,45 +217,33 @@ class Repeated(Field):
                 raise FieldValidationError(
                     f'Field of type {of_type.__name__!r}. Packed repeated fields only support primitive types'
                 )
-            self._field = MessageField(of_type, number=number)
+            self.field = MessageField(of_type, number=number)
         elif issubclass(of_type, enum.IntEnum):
-            self._field = EnumField(of_type, number=number)
+            self.field = EnumField(of_type, number=number)
         else:
-            self._field = of_type(number=number)
+            self.field = of_type(number=number)
 
-        self._of_type = of_type
-        self._packed: bool = packed
-        self._strategy: BaseRepeatedStrategy
+        self.of_type = of_type
+        self.packed: bool = packed
+        self.strategy: BaseRepeatedStrategy
 
         if packed:
-            self._strategy = PackedRepeatedStrategy(self._field, number)
+            self.strategy = PackedRepeatedStrategy(self.field, number)
         else:
-            self._strategy = UnpackedRepeatedStrategy(self._field, number)
+            self.strategy = UnpackedRepeatedStrategy(self.field, number)
 
-        self.wire_type = self._strategy.wire_type
+        self.wire_type = self.strategy.wire_type
 
         super().__init__(number=number)
 
-    @property
-    def field(self):
-        return self._field
-
-    @property
-    def of_type(self):
-        return self._of_type
-
-    @property
-    def packed(self):
-        return self._packed
-
     def encode(self, values: list) -> bytes:
-        return self._strategy.encode(values)
+        return self.strategy.encode(values)
 
     def encode_value(self, values: list) -> bytes:
-        return self._strategy.encode(values)
+        return self.strategy.encode(values)
 
     def decode(self, stream: IO) -> list:
-        return self._strategy.decode(stream)
+        return self.strategy.decode(stream)
 
     def validate_value(self, values: Iterable):
         if not isinstance(values, Iterable):
@@ -263,7 +252,7 @@ class Repeated(Field):
             )
 
         for value in values:
-            self._field.validate_value(value)
+            self.field.validate_value(value)
 
 
 class Int(PrimitiveField):
@@ -408,6 +397,19 @@ class Bool(PrimitiveField):
             )
 
 
+def _validate_py_enum(py_enum: Type[enum.IntEnum]):
+    if not issubclass(py_enum, enum.IntEnum):
+        raise FieldValidationError(
+            f'Enum field should be a subclass of IntEnum, got {py_enum!r} instead'
+        )
+
+    for variant in py_enum:
+        if not -2 ** 31 <= variant.value <= 2 ** 31 - 1:
+            raise FieldValidationError(
+                f'Invalid enum field variant {variant.value}. Should be in range [-2 ** 31 .. 2 ** 31 - 1]'
+            )
+
+
 class EnumField(PrimitiveField):
     wire_type = WireType.VARINT
 
@@ -419,7 +421,7 @@ class EnumField(PrimitiveField):
         default=None,
         required=False,
     ):
-        self._validate_py_enum(py_enum)
+        _validate_py_enum(py_enum)
 
         super().__init__(
             number=number,
@@ -427,7 +429,7 @@ class EnumField(PrimitiveField):
             required=required,
         )
 
-        self._py_enum: Type[enum.IntEnum] = py_enum
+        self.py_enum: Type[enum.IntEnum] = py_enum
 
     def encode_value(self, value: int) -> bytes:
         return encode_varint(value)
@@ -437,31 +439,18 @@ class EnumField(PrimitiveField):
 
         # Specification: omit value that's not in the enum's variants
         try:
-            return self._py_enum(value)
+            return self.py_enum(value)
         except ValueError:
             return None
 
     def validate_value(self, value: int):
         try:
-            self._py_enum(value)
+            self.py_enum(value)
         except ValueError:
             raise ValueError(
-                f'Expected an enum value of {repr([x for x in self._py_enum])}, '
+                f'Expected an enum value of {repr([x for x in self.py_enum])}, '
                 f'got {value} instead'
             )
-
-    @staticmethod
-    def _validate_py_enum(py_enum: Type[enum.IntEnum]):
-        if not issubclass(py_enum, enum.IntEnum):
-            raise FieldValidationError(
-                f'Enum field should be a subclass of IntEnum, got {py_enum!r} instead'
-            )
-
-        for variant in py_enum:
-            if not -2 ** 31 <= variant.value <= 2 ** 31 - 1:
-                raise FieldValidationError(
-                    f'Invalid enum field variant {variant.value}. Should be in range [-2 ** 31 .. 2 ** 31 - 1]'
-                )
 
 
 class Fixed32(Int):
@@ -681,7 +670,7 @@ class MessageField(Field):
 
     def __init__(self, of_type, *, number: int):
         super().__init__(number=number)
-        self._of_type = of_type
+        self.of_type = of_type
 
     def encode_value(self, value) -> bytes:
         encoded_message = value.to_bytes()
@@ -690,26 +679,22 @@ class MessageField(Field):
     def decode(self, stream: IO):
         length = decode_varint(stream)
         message_stream = io.BytesIO(stream.read(length))
-        return self._of_type.from_stream(message_stream)
+        return self.of_type.from_stream(message_stream)
 
     def validate_value(self, value):
-        if not isinstance(value, self._of_type):
+        if not isinstance(value, self.of_type):
             raise ValueError(
-                f'Expected a value of type {self._of_type.__name__!r}'
+                f'Expected a value of type {self.of_type.__name__!r}'
                 f', got value of type {type(value).__name__!r} instead'
             )
 
 
 class OneOf:
     def __init__(self, *args: str):
-        self._fields: List[str] = list(args)
+        self.fields: List[str] = list(args)
 
         # name of one_of is set in the message that contains the one_of
         self.name: Optional[str] = None
-
-    @property
-    def fields(self):
-        return self._fields
 
 
 one_of = OneOf
