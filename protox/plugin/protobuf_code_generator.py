@@ -408,7 +408,8 @@ class ProtobufCodeGenerator:
                             field.type
                         )
 
-                if self.is_map_field(field):
+                if self.is_map_field(field) or is_message_field(field):
+                    # map and message fields has no default or required params
                     pass
                 elif is_repeated(field):
                     if field.options and field.options.packed:
