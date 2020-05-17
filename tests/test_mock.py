@@ -1,9 +1,9 @@
 import inspect
-from typing import List, Type
+from typing import List, Type, Dict
 
 import pytest
 
-from protox import Message, String
+from protox import Message, String, MapField, Int32
 from protox.mock import mock_message
 from importlib import import_module
 
@@ -47,3 +47,15 @@ def test_mock_message_with_default_values():
         name=name,
     )
     assert user.name == name
+
+
+def test_mock_message_with_map_field():
+    class MyMessage(Message):
+        data: Dict[str, int] = MapField(
+            number=1,
+            key=String,
+            value=Int32,
+        )
+
+    message = mock_message(MyMessage)
+    assert MyMessage.from_bytes(message.to_bytes()) == message
