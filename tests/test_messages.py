@@ -368,7 +368,7 @@ def test_required_message_field():
 
     message = SimpleMessage()
     assert not message.is_initialized()
-    
+
     message.x = Empty()
     assert message.is_initialized()
 

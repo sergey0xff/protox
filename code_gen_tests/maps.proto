@@ -1,0 +1,17 @@
+syntax = 'proto2';
+
+import "google/protobuf/empty.proto";
+
+message MapMessage {
+    enum Color {
+        UNDEFINED = 0;
+        RED = 1;
+        GREEN = 2;
+        BLUE = 3;
+    }
+    
+    map<string, int32> string_i32 = 1;
+    map<string, google.protobuf.Empty> string_message = 2;
+    map<int32, bytes> i32_bytes = 3;
+    map<string, Color> string_enum = 4;
+}
