@@ -62,7 +62,7 @@ class PhoneNumber(Message):
 
 
 class User(Message):
-    phone_number: PhoneNumber = PhoneNumber.as_field(number=1)
+    phone_number: PhoneNumber = PhoneNumber.as_field(number=1, required=True)
 
 
 user = User()

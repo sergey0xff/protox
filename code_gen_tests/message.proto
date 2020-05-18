@@ -14,6 +14,7 @@ message TopLevel {
 
     required SecondLevel second = 1;
     required SecondLevel.ThirdLevel third = 2;
+    optional SecondLevel optional_message = 3;
 }
 
 message RepeatedMessage {

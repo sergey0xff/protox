@@ -623,7 +623,7 @@ class MapField(Field):
         from protox import Message
 
         if issubclass(value, Message):
-            value_field = value.as_field(number=2)
+            value_field = value.as_field(number=2, required=True)
         elif issubclass(value, enum.IntEnum):
             value_field = EnumField(number=2, required=True, py_enum=value)
         else:
@@ -668,9 +668,16 @@ class MapField(Field):
 class MessageField(Field):
     wire_type = WireType.LENGTH
 
-    def __init__(self, of_type, *, number: int):
+    def __init__(
+        self,
+        of_type,
+        *,
+        number: int,
+        required: bool = False
+    ):
         super().__init__(number=number)
-        self.of_type = of_type
+        self.of_type: Type['Message'] = of_type
+        self.required: bool = required
 
     def encode_value(self, value) -> bytes:
         encoded_message = value.to_bytes()

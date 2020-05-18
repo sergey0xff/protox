@@ -1,7 +1,7 @@
 import io
 from abc import ABCMeta
 from enum import IntEnum
-from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Union
+from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Union, Set
 
 from protox.encoding import decode_header, wire_type_to_decoder
 from protox.exceptions import MessageEncodeError, MessageDecodeError, FieldValidationError
@@ -131,6 +131,12 @@ def _add_field_to_message(
 
     field.name = name
 
+    if (
+        getattr(field, 'required', False)
+        and getattr(field, 'default', None) is None
+    ):
+        message_type._required_fields.add(field.name)
+
     setattr(
         message_type,
         name,
@@ -168,6 +174,7 @@ class MessageMeta(ABCMeta):
 
             new_cls._field_by_name = {}
             new_cls._field_by_number = {}
+            new_cls._required_fields = set()
 
             one_ofs = mcs._collect_one_ofs(name, namespace)
             new_cls._one_of_by_field_name = one_ofs
@@ -232,6 +239,7 @@ class Message(metaclass=MessageMeta):
     _field_by_name: Dict[str, Union[Field, Repeated]] = None
     _field_by_number: Dict[int, Union[Field, Repeated]] = None
     _one_of_by_field_name: dict = None
+    _required_fields: Set[str] = None
 
     # Provided by code generator
     DESCRIPTOR: 'DescriptorProto' = None
@@ -281,10 +289,11 @@ class Message(metaclass=MessageMeta):
         cls._from_python = fn
 
     @classmethod
-    def as_field(cls, *, number: int) -> MessageField:
+    def as_field(cls, *, number: int, required: bool = False) -> MessageField:
         return MessageField(
             cls,
-            number=number
+            number=number,
+            required=required,
         )
 
     @classmethod
@@ -347,17 +356,18 @@ class Message(metaclass=MessageMeta):
         return stream.read()
 
     def to_stream(self, stream: BinaryIO):
+        if not self.is_initialized():
+            required_fields = self._required_fields - set(self._field_by_name.keys())
+
+            raise MessageEncodeError(
+                f'Fields {required_fields} required but was not set'
+            )
+
         for key, field in self._field_by_name.items():
             value = getattr(self, key)
 
-            if value is None:
-                # TODO: replace with one `if` instead of nested
-                if getattr(field, 'required', False):
-                    raise MessageEncodeError(
-                        f'Field {type(self).__name__}.{key} is required but was not set'
-                    )
-                else:
-                    continue
+            if value is None and not getattr(field, 'required', False):
+                continue
 
             stream.write(field.encode(value))
 
@@ -394,13 +404,11 @@ class Message(metaclass=MessageMeta):
 
     def is_initialized(self) -> bool:
         """
-        Returns True if all required fields are set
+        Returns True if all required non-default fields are set
         """
-        for name, field in self._field_by_name.items():
-            if getattr(field, 'required', False) and name not in self._data:
-                return False
-
-        return True
+        return self._required_fields.issubset(
+            self._data.keys()
+        )
 
     @classmethod
     def list_fields(cls) -> List[str]:

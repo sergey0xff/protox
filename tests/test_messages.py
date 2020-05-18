@@ -4,6 +4,7 @@ from typing import List
 
 import pytest
 
+from protox import Empty
 from protox.exceptions import FieldValidationError
 from protox.fields import Int32, String, MessageField, one_of, EnumField, Repeated
 from protox.message import Message
@@ -359,6 +360,28 @@ def test_message_as_field():
     message_field = SimpleMessage.as_field(number=number)
     assert isinstance(message_field, MessageField)
     assert message_field.number == number
+
+
+def test_required_message_field():
+    class SimpleMessage(Message):
+        x = Empty.as_field(number=1, required=True)
+
+    message = SimpleMessage()
+    assert not message.is_initialized()
+    
+    message.x = Empty()
+    assert message.is_initialized()
+
+
+def test_optional_message_field():
+    class SimpleMessage(Message):
+        x = Empty.as_field(number=1, required=False)
+
+    message = SimpleMessage()
+    assert message.is_initialized()
+
+    message.x = Empty()
+    assert message.is_initialized()
 
 
 def test_message_as_repeated():
