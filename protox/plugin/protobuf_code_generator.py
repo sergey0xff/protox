@@ -62,11 +62,7 @@ class ProtobufCodeGenerator:
         :param type_name message or enum type
         Checks if py_type defined in current file
         """
-        try:
-            return self._index.proto_files[type_name] == self._proto_file
-        except KeyError:
-            print(self.index.proto_files)
-            exit(0)
+        return self._index.proto_files[type_name] == self._proto_file
 
     def get_local_type(self, type_name: str) -> str:
         field_type = type_name.lstrip('.')
