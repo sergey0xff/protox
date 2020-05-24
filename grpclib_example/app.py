@@ -1,32 +1,49 @@
 import asyncio
 
+import grpclib
 from grpclib.client import Channel
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
 
-from app.my_service import MyService
-from app.protobuf.service.ping_pb import PingResponse, PingRequest
-from app.protobuf.service_grpclib import MyServiceStub
+from protobuf_out.ping_service_grpclib import MyServiceBase, MyServiceStub
+from protobuf_out.ping_service_pb import PingRequest, PingResponse
 
 HOST = 'localhost'
 PORT = 5051
 
 
-async def create_client(server_started_event: asyncio.Event):
-    await server_started_event.wait()
+class MyService(MyServiceBase):
+    async def ping(self, stream: grpclib.server.Stream):
+        request: PingRequest = await stream.recv_message()
+        counter = request.counter + 1
+        print(f'[Server]: {counter}')
+        await stream.send_message(
+            PingResponse(
+                status=PingResponse.Status.OK,
+                counter=counter,
+            )
+        )
 
+
+async def create_client(
+    server_started_event: asyncio.Event
+):
     channel = Channel(
         host=HOST,
         port=PORT
     )
     stub = MyServiceStub(channel)
+    counter = 0
 
+    # explicitly wait for server start
+    await server_started_event.wait()
     try:
         while True:
+            print(f'[Client]: {counter}')
             response: PingResponse = await stub.ping(
-                PingRequest(message='Hello there!')
+                PingRequest(counter=counter)
             )
-            print(f'Response: {response.message}')
+            counter = response.counter + 1
             await asyncio.sleep(1)
     finally:
         channel.close()

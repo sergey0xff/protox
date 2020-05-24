@@ -1,7 +1,7 @@
 syntax = "proto2";
 
 message PingRequest {
-    required string message = 1;
+    required uint64 counter = 1;
 }
 
 message PingResponse {
@@ -11,5 +11,9 @@ message PingResponse {
     }
 
     required Status status = 1;
-    required string message = 2;
+    required uint64 counter = 2;
+}
+
+service MyService {
+    rpc Ping (PingRequest) returns (PingResponse);
 }

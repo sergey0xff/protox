@@ -1,7 +1,0 @@
-syntax = "proto2";
-
-import "service/ping.proto";
-
-service MyService {
-    rpc Ping (PingRequest) returns (PingResponse);
-}
