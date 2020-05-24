@@ -344,7 +344,7 @@ class Message(metaclass=MessageMeta):
         for key, field, in cls._field_by_name.items():
             if getattr(field, 'required', False) and not getattr(field, 'default', None) and key not in message_fields:
                 raise MessageDecodeError(
-                    f"Field {cls.__name__}.{key} is required but was not read from input stream"
+                    f"Missing required field {key}"
                 )
 
         return cls(**message_fields)
@@ -357,10 +357,10 @@ class Message(metaclass=MessageMeta):
 
     def to_stream(self, stream: BinaryIO):
         if not self.is_initialized():
-            required_fields = self._required_fields - set(self._field_by_name.keys())
+            required_fields = self._required_fields - self._data.keys()
 
             raise MessageEncodeError(
-                f'Fields {required_fields} required but was not set'
+                f'Message {type(self).__qualname__!r} is missing required fields: {", ".join(required_fields)}'
             )
 
         for key, field in self._field_by_name.items():
@@ -388,7 +388,7 @@ class Message(metaclass=MessageMeta):
     def which_one_of(self, one_of_name: str) -> Optional[str]:
         if one_of_name not in self._one_ofs:
             raise ValueError(
-                f'Protocol message {type(self).__qualname__} has no one_of {one_of_name!r}'
+                f'Protocol message {type(self).__qualname__} has no such one_of {one_of_name!r}'
             )
 
         try:

@@ -2,7 +2,7 @@
 
 tmp_dir="$(mktemp -d -t proto-XXXXXXXXXX)"
 
-pip3 install .
+python3.8 -m pip install .
 echo '+ Protox installed'
 
 protoc \
@@ -14,7 +14,7 @@ protoc \
 echo '+ Protobuf messages compiled'
 
 for filename in $tmp_dir/*.py; do
-  python3 $filename
+  python3.8 $filename
 done
 
 rm -rf $tmp_dir
