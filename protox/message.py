@@ -236,10 +236,12 @@ T = TypeVar('T')
 
 class Message(metaclass=MessageMeta):
     # The following fields provided by metaclass
-    _field_by_name: Dict[str, Union[Field, Repeated]] = None
-    _field_by_number: Dict[int, Union[Field, Repeated]] = None
+    _field_by_name: Dict[str, Field] = None
+    _field_by_number: Dict[int, Field] = None
     _one_of_by_field_name: dict = None
     _required_fields: Set[str] = None
+    _extension_by_name: Dict[str, Field] = None
+    _extension_by_number: Dict[int, Field] = None
 
     # Provided by code generator
     DESCRIPTOR: 'DescriptorProto' = None
@@ -257,10 +259,6 @@ class Message(metaclass=MessageMeta):
         self._which_one_of = {}
 
         for key, value in kwargs.items():
-            if key not in self._field_by_name:
-                raise AttributeError(
-                    f'Protocol message {type(self).__qualname__} has no {key!r} field'
-                )
             if value is not None:
                 setattr(self, key, value)
 

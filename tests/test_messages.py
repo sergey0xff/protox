@@ -397,14 +397,6 @@ def test_message_as_repeated():
     assert repeated_message_field.number == number
 
 
-def test_message_constructor_raises_attribute_error():
-    class SimpleMessage(Message):
-        x = Int32(number=1)
-
-    with pytest.raises(AttributeError):
-        SimpleMessage(bad_field=123)
-
-
 def test_message_constructor_raises_value_error():
     class SimpleMessage(Message):
         x = Int32(number=1)
