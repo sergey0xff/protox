@@ -346,10 +346,9 @@ def test_one_of_with_zero_fields():
 
 
 def test_one_of_with_one_field():
-    with pytest.raises(FieldValidationError):
-        class _(Message):
-            x = Int32(number=1, required=False)
-            number = one_of('x')
+    class _(Message):
+        x = Int32(number=1, required=False)
+        number = one_of('x')
 
 
 def test_message_as_field():

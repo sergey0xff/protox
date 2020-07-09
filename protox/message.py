@@ -192,9 +192,9 @@ class MessageMeta(ABCMeta):
             if isinstance(value, OneOf):
                 value.name = key
 
-                if len(value.fields) < 2:
+                if len(value.fields) < 1:
                     raise FieldValidationError(
-                        f'one_f {key!r} of message {class_name!r} should have at least 2 fields'
+                        f'one_f {key!r} of message {class_name!r} should have at least one field'
                     )
 
                 for name in value.fields:
