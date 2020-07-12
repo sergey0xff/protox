@@ -22,7 +22,7 @@ def decode_bytes(stream: IO) -> bytes:
 
 
 def encode_varint(value: int) -> bytes:
-    rv = list()
+    rv = []
     x = value & 127
     value >>= 7
 
