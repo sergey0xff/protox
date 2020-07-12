@@ -6,10 +6,10 @@ python3.8 -m pip install .
 echo '+ Protox installed'
 
 protoc \
-  --proto_path=code_gen_tests \
+  --proto_path=tests/code_gen_tests \
   --protox_out=$tmp_dir \
   --protox_opt="--with-dependencies" \
-  code_gen_tests/*.proto
+  tests/code_gen_tests/*.proto
 
 echo '+ Protobuf messages compiled'
 
@@ -19,4 +19,4 @@ done
 
 rm -rf $tmp_dir
 
-echo '+ All tests passed'
+echo '+ Tests completed'
