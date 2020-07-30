@@ -1,9 +1,9 @@
-import io
 from abc import ABCMeta
 from enum import IntEnum
 from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Union, Set
 
-from protox.encoding import decode_header, wire_type_to_decoder
+from protox.encoding import wire_type_to_decoder
+from protox_encoding import decode_header
 from protox.exceptions import MessageEncodeError, MessageDecodeError, FieldValidationError
 from protox.fields import Field, OneOf, Repeated, MessageField, MapField, PrimitiveField
 from protox.validated_dict import ValidatedDict
@@ -305,19 +305,11 @@ class Message(metaclass=MessageMeta):
 
     @classmethod
     def from_bytes(cls: Type[T], data: bytes) -> T:
-        stream = io.BytesIO(data)
-        return cls.from_stream(stream)
-
-    @classmethod
-    def from_stream(cls: Type[T], stream: BinaryIO) -> T:
+        position = 0
         message_fields = {}
 
-        while True:
-            # checking for end of message
-            try:
-                number, wire_type = decode_header(stream)
-            except MessageDecodeError:
-                break
+        while position < len(data):
+            number, wire_type, position = decode_header(data, position)
 
             if number in cls._field_by_number:
                 field = cls._field_by_number[number]
@@ -329,15 +321,17 @@ class Message(metaclass=MessageMeta):
                     )
 
                 if isinstance(field, Repeated) and not field.packed:
-                    message_fields.setdefault(field.name, []).append(field.decode(stream))
+                    item, position = field.decode(data, position)
+                    message_fields.setdefault(field.name, []).append(item)
                 elif isinstance(field, MapField):
-                    key, value = field.decode(stream)
+                    key, value, position = field.decode(data, position)
                     message_fields.setdefault(field.name, {})[key] = value
                 else:
-                    message_fields[field.name] = field.decode(stream)
+                    item, position = field.decode(data, position)
+                    message_fields[field.name] = item
             else:
-                # read and discard unknown field
-                wire_type_to_decoder[wire_type](stream)
+                # skip unknown fields
+                _, position = wire_type_to_decoder[wire_type](data, position)
 
         # TODO: when adding field to Message if the field is required
         #  put it to Message._required_fields to simplify the following check
@@ -349,13 +343,11 @@ class Message(metaclass=MessageMeta):
 
         return cls(**message_fields)
 
-    def to_bytes(self) -> bytes:
-        stream = io.BytesIO()
-        self.to_stream(stream)
-        stream.seek(0)
-        return stream.read()
+    @classmethod
+    def from_stream(cls: Type[T], stream: BinaryIO) -> T:
+        return cls.from_bytes(stream.read())
 
-    def to_stream(self, stream: BinaryIO):
+    def to_bytes(self) -> bytes:
         if not self.is_initialized():
             required_fields = self._required_fields - self._data.keys()
 
@@ -363,13 +355,20 @@ class Message(metaclass=MessageMeta):
                 f'Message {type(self).__qualname__!r} is missing required fields: {", ".join(required_fields)}'
             )
 
+        encoded_fields = []
+
         for key, field in self._field_by_name.items():
             value = getattr(self, key)
 
-            if value is None and not getattr(field, 'required', False):
+            if value is None:
                 continue
 
-            stream.write(field.encode(value))
+            encoded_fields.append(field.encode(value))
+
+        return b''.join(encoded_fields)
+
+    def to_stream(self, stream: BinaryIO):
+        stream.write(self.to_bytes())
 
     def has_field(self, name: str) -> bool:
         """
@@ -596,9 +595,9 @@ class Message(metaclass=MessageMeta):
             buffer.append(f'{indent}{name + " = " if name else ""}{value!r}')
 
     # The following methods provided for libraries like grpclib to simplify end-user experience
-    def SerializeToString(self):
+    def SerializeToString(self) -> bytes:
         return self.to_bytes()
 
     @classmethod
-    def FromString(cls, data):
+    def FromString(cls: Type[T], data: bytes) -> T:
         return cls.from_bytes(data)

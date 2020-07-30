@@ -23,11 +23,11 @@ def simple_message_encoded():
     return b'\x08\x01'
 
 
-def test_dumps(simple_message, simple_message_encoded):
+def test_to_bytes(simple_message, simple_message_encoded):
     assert simple_message.to_bytes() == simple_message_encoded
 
 
-def test_dump(simple_message, simple_message_encoded):
+def test_to_stream(simple_message, simple_message_encoded):
     stream = io.BytesIO()
     simple_message.to_stream(stream)
     stream.seek(0)
@@ -35,16 +35,15 @@ def test_dump(simple_message, simple_message_encoded):
     assert stream.read() == simple_message_encoded
 
 
-def test_load(simple_message, simple_message_encoded):
+def test_from_stream(simple_message, simple_message_encoded):
     stream = io.BytesIO(simple_message_encoded)
     message = simple_message.from_stream(stream)
 
     assert message.x == 1
 
 
-def test_loads(simple_message, simple_message_encoded):
+def test_from_bytes(simple_message, simple_message_encoded):
     message = simple_message.from_bytes(simple_message_encoded)
-
     assert message.x == 1
 
 

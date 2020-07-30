@@ -1,11 +1,10 @@
-import io
 from enum import IntEnum
 from typing import Type
 
 import pytest
 
-from protox.encoding import decode_varint, encode_varint, decode_header
-from protox.exceptions import MessageDecodeError, FieldValidationError
+from protox_encoding import decode_varint, encode_varint, decode_header
+from protox.exceptions import FieldValidationError
 from protox.fields import (
     Int32, Int64, Bytes, UInt32, UInt64, String,
     Bool, SInt64, SInt32, EnumField, Fixed32, Fixed64, SFixed32,
@@ -38,16 +37,12 @@ class TestUInt32:
 
     @pytest.mark.parametrize('expected_value, value', uint32_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert UInt32(number=1).decode(stream) == expected_value
+        assert UInt32(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('bad_input', uint32_bad_input)
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bad_input)
-
-        with pytest.raises(MessageDecodeError):
-            UInt32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            UInt32(number=1).decode(bad_input, 0)
 
     @pytest.mark.parametrize('valid_input', [
         0,
@@ -82,16 +77,12 @@ class TestUInt64:
 
     @pytest.mark.parametrize('expected_value, value', uint64_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert UInt64(number=1).decode(stream) == expected_value
+        assert UInt64(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('bad_input', uint32_bad_input)
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bad_input)
-
-        with pytest.raises(MessageDecodeError):
-            UInt32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            UInt32(number=1).decode(bad_input, 0)
 
     @pytest.mark.parametrize('valid_input', [
         0,
@@ -131,17 +122,15 @@ class TestInt32:
 
     @pytest.mark.parametrize('expected_value, value', int32_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        decoded_value = Int32(number=1).decode(stream)
+        decoded_value, position = Int32(number=1).decode(value, 0)
 
         assert decoded_value == expected_value
+        assert position == len(value)
 
     @pytest.mark.parametrize('bad_input', uint32_bad_input)
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bad_input)
-
-        with pytest.raises(MessageDecodeError):
-            Int32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Int32(number=1).decode(bad_input, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 31,
@@ -178,16 +167,13 @@ class TestInt64:
 
     @pytest.mark.parametrize('expected_value, value', int64_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        decoded_value = Int64(number=1).decode(stream)
+        decoded_value, position = Int64(number=1).decode(value, 0)
         assert decoded_value == expected_value
 
     @pytest.mark.parametrize('invalid_value', uint32_bad_input)
     def test_decode_invalid_value(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            Int64(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Int64(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 63,
@@ -229,17 +215,15 @@ class TestSInt32:
 
     @pytest.mark.parametrize('expected_value, value', sint32_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        decoded_value = SInt32(number=1).decode(stream)
+        decoded_value, position = SInt32(number=1).decode(value, 0)
 
         assert decoded_value == expected_value
+        assert position == len(value)
 
     @pytest.mark.parametrize('bad_input', uint32_bad_input)
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bad_input)
-
-        with pytest.raises(MessageDecodeError):
-            SInt32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            SInt32(number=1).decode(bad_input, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 31,
@@ -277,17 +261,14 @@ class TestSInt64:
 
     @pytest.mark.parametrize('expected_value, value', sint64_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        decoded_value = SInt64(number=1).decode(stream)
-
+        decoded_value, position = SInt64(number=1).decode(value, 0)
         assert decoded_value == expected_value
+        assert position == len(value)
 
     @pytest.mark.parametrize('bad_input', uint32_bad_input)
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bad_input)
-
-        with pytest.raises(MessageDecodeError):
-            SInt64(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            SInt64(number=1).decode(bad_input, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 63,
@@ -317,14 +298,13 @@ class TestBytes:
         b'\x08' * 10,
     ])
     def test_encode_decode(self, data):
-        encoded = Bytes(number=1).encode_value(data)
-        stream = io.BytesIO(encoded)
-        length = decode_varint(stream)
+        encoded_data = Bytes(number=1).encode_value(data)
+        length, position = decode_varint(encoded_data, 0)
         assert length == len(data)
 
-        stream.seek(0)
-        decoded_data = Bytes(number=1).decode(stream)
+        decoded_data, position = Bytes(number=1).decode(encoded_data, 0)
         assert decoded_data == data
+        assert position == len(encoded_data)
 
     @pytest.mark.parametrize('bad_input', [
         [],
@@ -333,10 +313,8 @@ class TestBytes:
         [3, 1, 2]
     ])
     def test_decode_bad_input(self, bad_input):
-        stream = io.BytesIO(bytes(bad_input))
-
-        with pytest.raises(MessageDecodeError):
-            Bytes(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Bytes(number=1).decode(bytes(bad_input), 0)
 
     @pytest.mark.parametrize('valid_input', [
         b'',
@@ -371,9 +349,7 @@ class TestString:
 
     @pytest.mark.parametrize('expected_value, value', str_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert String(number=1).decode(stream) == expected_value
+        assert String(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('valid_input', [
         '',
@@ -406,9 +382,7 @@ class TestBool:
 
     @pytest.mark.parametrize('expected_value, value', bool_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert Bool(number=1).decode(stream) is expected_value
+        assert Bool(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('valid_input', [
         True,
@@ -445,15 +419,14 @@ def color_field(color_enum):
 class TestEnum:
     def test_encode_decode(self, color_enum, color_field):
         encoded = color_field.encode_value(color_enum.RED)
-        stream = io.BytesIO(encoded)
-        decoded = color_field.decode(stream)
+        decoded, position = color_field.decode(encoded, 0)
 
         assert decoded == color_enum.RED
+        assert position == len(encoded)
 
     def test_decode_omits_unknown_variants(self, color_field):
-        stream = io.BytesIO(encode_varint(999_999))
-
-        assert color_field.decode(stream) is None
+        decoded, position = color_field.decode(encode_varint(999_999), 0)
+        assert decoded is None
 
     @pytest.mark.parametrize('valid_input', [1, 2, 3])
     def test_valid_input(self, color_field, valid_input):
@@ -504,19 +477,15 @@ class TestFixed32:
 
     @pytest.mark.parametrize('expected_value, value', fixed32_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert Fixed32(number=1).decode(stream) == expected_value
+        assert Fixed32(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
         b'\x00\x00',
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            Fixed32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Fixed32(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         0,
@@ -551,19 +520,15 @@ class TestFixed64:
 
     @pytest.mark.parametrize('expected_value, value', fixed64_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert Fixed64(number=1).decode(stream) == expected_value
+        assert Fixed64(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
         b'\x00\x00',
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            Fixed64(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Fixed64(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         0,
@@ -600,19 +565,15 @@ class TestSFixed32:
 
     @pytest.mark.parametrize('expected_value, value', sfixed32_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert SFixed32(number=1).decode(stream) == expected_value
+        assert SFixed32(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
         b'\x00',
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            SFixed32(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            SFixed32(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 31,
@@ -651,9 +612,7 @@ class TestSFixed64:
 
     @pytest.mark.parametrize('expected_value, value', sfixed64_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-
-        assert SFixed64(number=1).decode(stream) == expected_value
+        assert SFixed64(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
@@ -662,10 +621,8 @@ class TestSFixed64:
         b'\x00' * 7,
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            SFixed64(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            SFixed64(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         -2 ** 63,
@@ -706,10 +663,10 @@ class TestFloat:
 
     @pytest.mark.parametrize('expected_value, value', float_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        encoded_value = Float(number=1).decode(stream)
+        encoded_value, position = Float(number=1).decode(value, 0)
 
         assert encoded_value == expected_value
+        assert position == len(value)
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
@@ -717,10 +674,8 @@ class TestFloat:
         b'\xff\xff\x7f'
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            Float(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Float(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         0,
@@ -757,8 +712,7 @@ class TestDouble:
 
     @pytest.mark.parametrize('expected_value, value', double_test_cases)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        assert Double(number=1).decode(stream) == expected_value
+        assert Double(number=1).decode(value, 0) == (expected_value, len(value))
 
     @pytest.mark.parametrize('invalid_value', [
         b'',
@@ -766,10 +720,8 @@ class TestDouble:
         b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF',
     ])
     def test_decode_invalid(self, invalid_value):
-        stream = io.BytesIO(invalid_value)
-
-        with pytest.raises(MessageDecodeError):
-            Double(number=1).decode(stream)
+        with pytest.raises(RuntimeError):
+            Double(number=1).decode(invalid_value, 0)
 
     @pytest.mark.parametrize('valid_input', [
         2.2250738585072014e-308,
@@ -813,11 +765,11 @@ def test_field_header(field_type: Type[Field], expected_wire_type):
 
     field_number = 2 * 32
     encoded_header = field_type(number=field_number).header
-    stream = io.BytesIO(encoded_header)
-    number, wire_type = decode_header(stream)
+    number, wire_type, position = decode_header(encoded_header, 0)
 
     assert number == field_number
     assert wire_type == expected_wire_type
+    assert position == len(encoded_header)
 
 
 def test_enum_field_header(color_field):
@@ -827,8 +779,7 @@ def test_enum_field_header(color_field):
 
     encoded_header = color_field.header
 
-    stream = io.BytesIO(encoded_header)
-    number, wire_type = decode_header(stream)
+    number, wire_type, position = decode_header(encoded_header, 0)
 
     assert number == color_field.number
     assert wire_type == expected_wire_type
@@ -850,13 +801,14 @@ class TestRepeatedField:
     def test_decode(self, value, expected_value):
         field = Repeated(Int32, number=1, packed=False)
 
-        stream = io.BytesIO(value)
-
         data = []
 
+        position = 0
+
         for _ in expected_value:
-            decode_varint(stream)
-            data.append(field.decode(stream))
+            _, position = decode_varint(value, position)
+            item, position = field.decode(value, position)
+            data.append(item)
 
         assert data == expected_value
 
@@ -886,20 +838,21 @@ packed_repeated_test_case = [
 
 
 class TestPackedRepeatedField:
-    @pytest.mark.parametrize('value, expected_value', packed_repeated_test_case + [([], b'')])
+    @pytest.mark.parametrize(
+        'value, expected_value',
+        packed_repeated_test_case + [([], b'')]
+    )
     def test_encode(self, value, expected_value):
         assert Repeated(Int32, number=1, packed=True).encode_value(value) == expected_value
 
     @pytest.mark.parametrize('expected_value, value', packed_repeated_test_case)
     def test_decode(self, value, expected_value):
-        stream = io.BytesIO(value)
-        number, wire_type = decode_header(stream)
+        number, wire_type, position = decode_header(value, 0)
 
         assert number == 1
         assert wire_type == 2
 
-        data = Repeated(Int32, number=1, packed=True).decode(stream)
-        print('\n>>>', data)
+        Repeated(Int32, number=1, packed=True).decode(value, position)
 
 
 class TestFieldNumber:

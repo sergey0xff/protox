@@ -3,8 +3,7 @@ from enum import IntEnum
 from typing import Dict, List, Iterable, Union, Iterator, BinaryIO
 
 from protox import Message, fields, one_of, define_fields
-from protox.encoding import decode_header
-from protox.exceptions import MessageDecodeError
+from protox_encoding import decode_header
 
 PyValue_T = Union[
     type(None),
@@ -81,21 +80,21 @@ class Struct(Message, UserDict):
         return Struct(**value)
 
     @classmethod
-    def from_stream(cls, stream: BinaryIO) -> 'Struct':
+    def from_bytes(cls, buffer: bytes) -> 'Struct':
         rv = cls()
         map_field = cls._field_by_number[1]
+        position = 0
 
-        while True:
-            # checking for end of message
-            try:
-                decode_header(stream)
-            except MessageDecodeError:
-                break
-
-            key, value = map_field.decode(stream)
+        while position < len(buffer):
+            _, position = decode_header(buffer, position)
+            key, value = map_field.decode(buffer, position)
             rv.set_value(key, value)
 
         return rv
+
+    @classmethod
+    def from_stream(cls, stream: BinaryIO) -> 'Struct':
+        return cls.from_bytes(stream.read())
 
 
 class NullValue(IntEnum):

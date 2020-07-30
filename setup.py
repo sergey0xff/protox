@@ -25,5 +25,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=[
+        'protox_encoding',
+    ],
     python_requires=">=3.6",
 )

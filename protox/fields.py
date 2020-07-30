@@ -1,16 +1,29 @@
 import enum
-import io
-import struct
 from abc import ABC, abstractmethod
-from typing import IO, Type, Optional, List, Dict, Tuple, Iterable, BinaryIO, Union
+from typing import Type, Optional, List, Dict, Tuple, Iterable, Union, Any
+
+from protox_encoding import (
+    encode_varint, decode_varint,
+    encode_bytes, decode_bytes,
+    encode_int64, decode_int64,
+    encode_uint32, decode_uint32,
+    encode_uint64, decode_uint64,
+    encode_sint32, decode_sint32,
+    encode_sint64, decode_sint64,
+    encode_float, decode_float,
+    encode_double, decode_double,
+    encode_bool, decode_bool,
+    encode_string, decode_string,
+    encode_fixed32, decode_fixed32,
+    encode_fixed64, decode_fixed64,
+    encode_sfixed32, decode_sfixed32,
+    encode_sfixed64, decode_sfixed64,
+    read_bytes,
+)
 
 from protox.constants import (
     MIN_INT32, MAX_INT32, MIN_INT64, MAX_INT64, MIN_UINT32,
     MAX_UINT32, MAX_UINT64, MIN_UINT64, MAX_FLOAT, MAX_DOUBLE
-)
-from protox.encoding import (
-    decode_bytes, encode_varint, decode_varint, encode_zig_zag32,
-    decode_zig_zag, encode_zig_zag64, encode_bytes
 )
 from protox.exceptions import MessageDecodeError, FieldValidationError
 
@@ -78,7 +91,6 @@ class Field(ABC):
         # name is set when adding the field to the message
         self.name: Optional[str] = None
 
-    @abstractmethod
     def encode_value(self, value) -> bytes:
         raise NotImplementedError()
 
@@ -88,16 +100,17 @@ class Field(ABC):
         """
         return self.header + self.encode_value(value)
 
-    @abstractmethod
-    def decode(self, stream: IO):
+    def decode(self, buffer: bytes, position: int):
         raise NotImplementedError()
 
-    @abstractmethod
     def validate_value(self, value):
         raise NotImplementedError()
 
 
 class PrimitiveField(Field, ABC):
+    encoder: callable
+    decoder: callable
+
     def __init__(
         self,
         *,
@@ -108,6 +121,12 @@ class PrimitiveField(Field, ABC):
         super().__init__(number=number)
         self.default = default
         self.required = required
+
+        if hasattr(self, 'encoder'):
+            self.encode_value = self.encoder
+
+        if hasattr(self, 'decoder'):
+            self.decode = self.decoder
 
     @classmethod
     def as_repeated(
@@ -134,7 +153,7 @@ class BaseRepeatedStrategy(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def decode(self, stream: IO):
+    def decode(self, buffer: bytes, position: int):
         raise NotImplementedError()
 
 
@@ -145,32 +164,29 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
         if not values:
             return b''
 
-        data = bytearray()
+        data = []
 
         for item in values:
-            data += self.field.encode_value(item)
+            data.append(self.field.encode_value(item))
 
         return (
             self.header +
-            encode_bytes(data)
+            encode_bytes(b''.join(data))
         )
 
-    def decode(self, stream: IO) -> list:
-        length = decode_varint(stream)
+    def decode(self, buffer: bytes, position: int) -> list:
+        length, position = decode_varint(buffer, position)
 
         items = []
 
-        data = stream.read(length)
-
-        if len(data) < length:
+        if len(buffer) < position + length:
             raise MessageDecodeError(
-                f'Expected to read {length:_} bytes, read {len(data):_} bytes instead'
+                f'Expected to read {length:_} bytes'
             )
 
-        stream = io.BytesIO(data)
-
-        while stream.seek(0, io.SEEK_CUR) < length:
-            items.append(self.field.decode(stream))
+        while position < position + length:
+            item, position = self.field.decode(buffer, position)
+            items.append(item)
 
         return items
 
@@ -191,7 +207,7 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
 
         return data
 
-    def decode(self, stream: IO):
+    def decode(self, buffer: bytes, position: int):
         """
         From docs:
         "repeated values do not have to appear consecutively;
@@ -199,7 +215,7 @@ class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
 
         That's why we can only read exactly one item at a time
         """
-        return self.field.decode(stream)
+        return self.field.decode(buffer, position)
 
 
 class Repeated(Field):
@@ -242,8 +258,8 @@ class Repeated(Field):
     def encode_value(self, values: list) -> bytes:
         return self.strategy.encode(values)
 
-    def decode(self, stream: IO) -> list:
-        return self.strategy.decode(stream)
+    def decode(self, buffer: bytes, position: int):
+        return self.strategy.decode(buffer, position)
 
     def validate_value(self, values: Iterable):
         if not isinstance(values, Iterable):
@@ -255,24 +271,10 @@ class Repeated(Field):
             self.field.validate_value(value)
 
 
-class Int(PrimitiveField):
+class Int(PrimitiveField, ABC):
     min_value: int
     max_value: int
     wire_type = WireType.VARINT
-
-    def encode_value(self, value: int) -> bytes:
-        if value < 0:
-            value += 2 ** 64
-
-        return encode_varint(value)
-
-    def decode(self, stream: IO) -> int:
-        value = decode_varint(stream)
-
-        if value > 2 ** 63 - 1:
-            value -= 2 ** 64
-
-        return value
 
     def validate_value(self, value: int):
         if not isinstance(value, int):
@@ -294,63 +296,61 @@ class Int(PrimitiveField):
             )
 
 
-class UInt(Int, ABC):
-    def decode(self, stream: IO) -> int:
-        return decode_varint(stream)
-
-
-class SInt(Int, ABC):
-    def decode(self, stream: IO) -> int:
-        zig_zag_value = decode_varint(stream)
-        return decode_zig_zag(zig_zag_value)
-
-
 class Int32(Int):
     min_value: int = MIN_INT32
     max_value: int = MAX_INT32
+
+    # according to protobuf reference implementation
+    # int32 encoded the same as int64
+    encoder = encode_int64
+    decoder = decode_int64
 
 
 class Int64(Int):
     min_value: int = MIN_INT64
     max_value: int = MAX_INT64
 
+    encoder = encode_int64
+    decoder = decode_int64
 
-class UInt32(UInt):
+
+class UInt32(Int):
     min_value: int = MIN_UINT32
     max_value: int = MAX_UINT32
 
+    encoder = encode_uint32
+    decoder = decode_uint32
 
-class UInt64(UInt):
+
+class UInt64(Int):
     min_value: int = MIN_UINT64
     max_value: int = MAX_UINT64
 
+    encoder = encode_uint64
+    decoder = decode_uint64
 
-class SInt32(SInt):
+
+class SInt32(Int):
     min_value: int = MIN_INT32
     max_value: int = MAX_INT32
 
-    def encode_value(self, value: int) -> bytes:
-        zig_zag_value = encode_zig_zag32(value)
-        return encode_varint(zig_zag_value)
+    encoder = encode_sint32
+    decoder = decode_sint32
 
 
-class SInt64(SInt):
+class SInt64(Int):
     min_value: int = MIN_INT64
     max_value: int = MAX_INT64
 
-    def encode_value(self, value: int) -> bytes:
-        zig_zag_value = encode_zig_zag64(value)
-        return encode_varint(zig_zag_value)
+    encoder = encode_sint64
+    decoder = decode_sint64
 
 
 class Bytes(PrimitiveField):
     wire_type = WireType.LENGTH
 
-    def encode_value(self, value: bytes) -> bytes:
-        return encode_bytes(value)
-
-    def decode(self, stream: IO) -> bytes:
-        return decode_bytes(stream)
+    encoder = encode_bytes
+    decoder = decode_bytes
 
     def validate_value(self, value: bytes):
         if not isinstance(value, bytes):
@@ -362,14 +362,8 @@ class Bytes(PrimitiveField):
 
 class String(PrimitiveField):
     wire_type = WireType.LENGTH
-
-    def encode_value(self, value: str) -> bytes:
-        data = value.encode('utf-8')
-        return encode_bytes(data)
-
-    def decode(self, stream: IO) -> str:
-        data = decode_bytes(stream)
-        return data.decode('utf-8')
+    encoder = encode_string
+    decoder = decode_string
 
     def validate_value(self, value: str):
         if not isinstance(value, str):
@@ -382,12 +376,8 @@ class String(PrimitiveField):
 class Bool(PrimitiveField):
     wire_type = WireType.VARINT
 
-    def encode_value(self, value: bool) -> bytes:
-        return chr(value).encode()
-
-    def decode(self, stream: IO) -> bool:
-        value = decode_varint(stream)
-        return bool(value)
+    encoder = encode_bool
+    decoder = decode_bool
 
     def validate_value(self, value: bool):
         if not isinstance(value, bool):
@@ -434,14 +424,16 @@ class EnumField(PrimitiveField):
     def encode_value(self, value: int) -> bytes:
         return encode_varint(value)
 
-    def decode(self, stream: IO) -> Optional[int]:
-        value = decode_varint(stream)
+    def decode(self, buffer: bytes, position: int) -> Tuple[Optional[int], int]:
+        value, position = decode_varint(buffer, position)
 
         # Specification: omit value that's not in the enum's variants
         try:
-            return self.py_enum(value)
+            rv = self.py_enum(value)
         except ValueError:
-            return None
+            rv = None
+
+        return rv, position
 
     def validate_value(self, value: int):
         try:
@@ -458,18 +450,8 @@ class Fixed32(Int):
     max_value = MAX_UINT32
     wire_type = WireType.FIXED_32
 
-    def encode_value(self, value: int) -> bytes:
-        return struct.pack('<I', value)
-
-    def decode(self, stream: IO) -> int:
-        data = stream.read(4)
-
-        if len(data) != 4:
-            raise MessageDecodeError(
-                f"Expected to read 4 bytes, got {len(data)} bytes instead"
-            )
-
-        return struct.unpack('<I', data)[0]
+    encoder = encode_fixed32
+    decoder = decode_fixed32
 
 
 class Fixed64(Int):
@@ -477,18 +459,8 @@ class Fixed64(Int):
     max_value = MAX_UINT64
     wire_type = WireType.FIXED_64
 
-    def encode_value(self, value: int) -> bytes:
-        return struct.pack('<Q', value)
-
-    def decode(self, stream: IO) -> int:
-        data = stream.read(8)
-
-        if len(data) != 8:
-            raise MessageDecodeError(
-                f"Expected to read 8 bytes, got {len(data)} bytes instead"
-            )
-
-        return struct.unpack('<Q', data)[0]
+    encoder = encode_fixed64
+    decoder = decode_fixed64
 
 
 class SFixed32(Int):
@@ -496,18 +468,8 @@ class SFixed32(Int):
     max_value = MAX_INT32
     wire_type = WireType.FIXED_32
 
-    def encode_value(self, value: int) -> bytes:
-        return struct.pack('<i', value)
-
-    def decode(self, stream: IO) -> int:
-        data = stream.read(4)
-
-        if len(data) < 4:
-            raise MessageDecodeError(
-                f"Expected to read 4 bytes, got {len(data)} bytes instead"
-            )
-
-        return struct.unpack('<i', data)[0]
+    encoder = encode_sfixed32
+    decoder = decode_sfixed32
 
 
 class SFixed64(Int):
@@ -515,43 +477,19 @@ class SFixed64(Int):
     max_value = MAX_INT64
     wire_type = WireType.FIXED_64
 
-    def encode_value(self, value: int) -> bytes:
-        return struct.pack('<q', value)
-
-    def decode(self, stream: IO) -> int:
-        data = stream.read(8)
-
-        if len(data) < 8:
-            raise MessageDecodeError(
-                f"Expected to read 8 bytes, got {len(data)} bytes instead"
-            )
-
-        return struct.unpack('<q', data)[0]
+    encoder = encode_sfixed64
+    decoder = decode_sfixed64
 
 
 class Float(PrimitiveField):
     max_value = MAX_FLOAT
     wire_type = WireType.FIXED_32
 
-    def encode_value(self, value) -> bytes:
-        return struct.pack('<f', value)
+    encoder = encode_float
+    decoder = decode_float
 
-    def decode(self, stream: IO):
-        data = stream.read(4)
-
-        if len(data) < 4:
-            raise MessageDecodeError(
-                f'Expected to read 4 bytes, got {len(data)} bytes instead'
-            )
-
-        return struct.unpack('<f', data)[0]
-
-    def validate_value(self, value):
-        if not (
-            isinstance(value, float)
-            or
-            isinstance(value, int)
-        ):
+    def validate_value(self, value: Union[float, int]):
+        if not isinstance(value, (float, int)):
             raise ValueError(
                 f"Expected a value of type 'float' or 'int'"
                 f", got value of type {type(value).__name__!r} instead"
@@ -573,18 +511,8 @@ class Double(Float):
     max_value = MAX_DOUBLE
     wire_type = WireType.FIXED_64
 
-    def encode_value(self, value) -> bytes:
-        return struct.pack('<d', value)
-
-    def decode(self, stream: IO):
-        data = stream.read(8)
-
-        if len(data) < 8:
-            raise MessageDecodeError(
-                f'Expected to read 8 bytes, got {len(data)} bytes instead'
-            )
-
-        return struct.unpack('<d', data)[0]
+    encoder = encode_double
+    decoder = decode_double
 
 
 class MapField(Field):
@@ -652,9 +580,13 @@ class MapField(Field):
 
     encode = encode_value
 
-    def decode(self, stream: BinaryIO) -> Tuple:
+    def decode(
+        self,
+        buffer: bytes,
+        position: int
+    ) -> Tuple:
         entry = self.dict_entry.from_bytes(
-            decode_bytes(stream)
+            decode_bytes(buffer, position)
         )
         return entry.key, entry.value
 
@@ -670,7 +602,7 @@ class MessageField(Field):
 
     def __init__(
         self,
-        of_type,
+        of_type: Type['Message'],
         *,
         number: int,
         required: bool = False
@@ -683,10 +615,10 @@ class MessageField(Field):
         encoded_message = value.to_bytes()
         return encode_bytes(encoded_message)
 
-    def decode(self, stream: IO):
-        length = decode_varint(stream)
-        message_stream = io.BytesIO(stream.read(length))
-        return self.of_type.from_stream(message_stream)
+    def decode(self, buffer: bytes, position: int) -> Tuple[Any, int]:
+        length, position = decode_varint(buffer, position)
+        data, position = read_bytes(buffer, position, length)
+        return self.of_type.from_bytes(buffer[position:position + length]), position
 
     def validate_value(self, value):
         if not isinstance(value, self.of_type):
