@@ -11,7 +11,6 @@ class Point(protox.Message):
 
 p = Point(x=1, y=2, z=3)
 
-
 # N = 100_000
 # before 0.23
 # after 0.16
@@ -24,6 +23,10 @@ p = Point(x=1, y=2, z=3)
 
 encoded = p.to_bytes()
 
+# N = 100_00
+# before 0.64
+# after 0.39
+# after cython ???
 t = time.monotonic()
 for _ in range(100_000):
     Point.from_bytes(encoded)

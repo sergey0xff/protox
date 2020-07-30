@@ -307,6 +307,7 @@ class Message(metaclass=MessageMeta):
     def from_bytes(cls: Type[T], data: bytes) -> T:
         position = 0
         message_fields = {}
+        required_fields_left: Set[str] = cls._required_fields.copy()
 
         while position < len(data):
             number, wire_type, position = decode_header(data, position)
@@ -329,17 +330,16 @@ class Message(metaclass=MessageMeta):
                 else:
                     item, position = field.decode(data, position)
                     message_fields[field.name] = item
+
+                required_fields_left.discard(field.name)
             else:
                 # skip unknown fields
                 _, position = wire_type_to_decoder[wire_type](data, position)
 
-        # TODO: when adding field to Message if the field is required
-        #  put it to Message._required_fields to simplify the following check
-        for key, field, in cls._field_by_name.items():
-            if getattr(field, 'required', False) and not getattr(field, 'default', None) and key not in message_fields:
-                raise MessageDecodeError(
-                    f"Missing required field {key}"
-                )
+        if required_fields_left:
+            raise MessageDecodeError(
+                f"Missing required fields {required_fields_left}"
+            )
 
         return cls(**message_fields)
 

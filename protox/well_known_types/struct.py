@@ -86,8 +86,8 @@ class Struct(Message, UserDict):
         position = 0
 
         while position < len(buffer):
-            _, position = decode_header(buffer, position)
-            key, value = map_field.decode(buffer, position)
+            _number, _wire_type, position = decode_header(buffer, position)
+            key, value, position = map_field.decode(buffer, position)
             rv.set_value(key, value)
 
         return rv

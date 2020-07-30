@@ -99,11 +99,13 @@ def test_embedded_message():
     class SimpleMessage(Message):
         user: User = MessageField(User, number=1)
 
-    message = SimpleMessage(user=User(name='John Doe'))
+    message = SimpleMessage(
+        user=User(
+            name='John Doe'
+        )
+    )
     encoded_message = message.to_bytes()
-    stream = io.BytesIO(encoded_message)
-
-    decoded_message = SimpleMessage.from_stream(stream)
+    decoded_message = SimpleMessage.from_bytes(encoded_message)
 
     assert decoded_message.user.name == message.user.name
 

@@ -54,6 +54,7 @@ __all__ = [
     'OneOf',
     'one_of',
     'MapField',
+    'PrimitiveField',
 
     'field_type_by_name',
     'field_types',
@@ -174,7 +175,7 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
             encode_bytes(b''.join(data))
         )
 
-    def decode(self, buffer: bytes, position: int) -> list:
+    def decode(self, buffer: bytes, position: int):
         length, position = decode_varint(buffer, position)
 
         items = []
@@ -184,11 +185,13 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
                 f'Expected to read {length:_} bytes'
             )
 
-        while position < position + length:
+        end = position + length
+
+        while position < end:
             item, position = self.field.decode(buffer, position)
             items.append(item)
 
-        return items
+        return items, position
 
 
 class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
@@ -585,10 +588,9 @@ class MapField(Field):
         buffer: bytes,
         position: int
     ) -> Tuple:
-        entry = self.dict_entry.from_bytes(
-            decode_bytes(buffer, position)
-        )
-        return entry.key, entry.value
+        data, position = decode_bytes(buffer, position)
+        entry = self.dict_entry.from_bytes(data)
+        return entry.key, entry.value, position
 
     def validate_value(self, value: Dict):
         if not isinstance(value, dict):
@@ -618,7 +620,7 @@ class MessageField(Field):
     def decode(self, buffer: bytes, position: int) -> Tuple[Any, int]:
         length, position = decode_varint(buffer, position)
         data, position = read_bytes(buffer, position, length)
-        return self.of_type.from_bytes(buffer[position:position + length]), position
+        return self.of_type.from_bytes(data), position
 
     def validate_value(self, value):
         if not isinstance(value, self.of_type):

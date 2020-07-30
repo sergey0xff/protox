@@ -26,7 +26,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'protox_encoding',
+        'protox_encoding>=0.0.6',
     ],
     python_requires=">=3.6",
 )
