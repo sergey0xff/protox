@@ -81,7 +81,7 @@ class Struct(Message, UserDict):
         return Struct(**value)
 
     @classmethod
-    def from_stream(cls, stream: BinaryIO) -> 'Struct':
+    def from_stream(cls, stream: BinaryIO, *, strict=True) -> 'Struct':
         rv = cls()
         map_field = cls._field_by_number[1]
 

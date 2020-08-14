@@ -471,3 +471,12 @@ def test_message_read_equals():
     b = SimpleMessage.from_bytes(a.to_bytes())
 
     assert a == b
+
+
+def test_message_read_non_strict():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1, required=True)
+
+    message = SimpleMessage.from_bytes(b'', strict=False)
+    assert not message.is_initialized()
+    assert message.x is None
