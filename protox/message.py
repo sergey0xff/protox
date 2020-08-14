@@ -304,12 +304,17 @@ class Message(metaclass=MessageMeta):
         )
 
     @classmethod
-    def from_bytes(cls: Type[T], data: bytes) -> T:
+    def from_bytes(cls: Type[T], data: bytes, *, strict=True) -> T:
         stream = io.BytesIO(data)
-        return cls.from_stream(stream)
+        return cls.from_stream(stream, strict=strict)
 
     @classmethod
-    def from_stream(cls: Type[T], stream: BinaryIO) -> T:
+    def from_stream(cls: Type[T], stream: BinaryIO, *, strict=True) -> T:
+        """
+        :param stream:
+        :param strict: when strict is False MessageDecodeError won't be raised in case a required field was not read
+        :return: Message of type T
+        """
         message_fields = {}
 
         while True:
@@ -339,13 +344,14 @@ class Message(metaclass=MessageMeta):
                 # read and discard unknown field
                 wire_type_to_decoder[wire_type](stream)
 
-        # TODO: when adding field to Message if the field is required
-        #  put it to Message._required_fields to simplify the following check
-        for key, field, in cls._field_by_name.items():
-            if getattr(field, 'required', False) and not getattr(field, 'default', None) and key not in message_fields:
-                raise MessageDecodeError(
-                    f"Missing required field {key}"
-                )
+        if strict:
+            # TODO: when adding field to Message if the field is required
+            #  put it to Message._required_fields to simplify the following check
+            for key, field, in cls._field_by_name.items():
+                if getattr(field, 'required', False) and not getattr(field, 'default', None) and key not in message_fields:
+                    raise MessageDecodeError(
+                        f"Missing required field {key}"
+                    )
 
         return cls(**message_fields)
 
