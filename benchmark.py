@@ -12,21 +12,23 @@ class Point(protox.Message):
 p = Point(x=1, y=2, z=3)
 
 # N = 100_000
+# Google python: 0.372589547005191, cpp: 0.049871427996549755
 # before 0.23
 # after 0.16
 # 0.15
 # 0.14
-# t = time.monotonic()
-# for _ in range(100_000):
-#     p.to_bytes()
-# print(time.monotonic() - t)
-
+t = time.monotonic()
+for _ in range(100_000):
+    p.to_bytes()
+print(time.monotonic() - t)
 encoded = p.to_bytes()
 
 # N = 100_00
+# Google python: 0.3893018969974946, cpp: 0.0306627780009876
 # before 0.64
 # after 0.39
-# after cython ???
+# after replacing isinstance(...) with polymorphism ~0.31
+# after cython ~0.3
 t = time.monotonic()
 for _ in range(100_000):
     Point.from_bytes(encoded)
