@@ -2,9 +2,9 @@ from abc import ABCMeta
 from enum import IntEnum
 from typing import BinaryIO, List, Callable, Optional, TypeVar, Type, Dict, Union, Set
 
-from protox.encoding import wire_type_to_decoder
-from protox_encoding import decode_header
-from protox.exceptions import MessageEncodeError, MessageDecodeError, FieldValidationError
+from protox_encoding import message_fields_from_bytes
+
+from protox.exceptions import MessageEncodeError, FieldValidationError
 from protox.fields import Field, OneOf, Repeated, MessageField, MapField, PrimitiveField
 from protox.validated_dict import ValidatedDict
 from protox.validated_list import ValidatedList
@@ -304,44 +304,15 @@ class Message(metaclass=MessageMeta):
         )
 
     @classmethod
-    def from_bytes(cls: Type[T], data: bytes) -> T:
-        position = 0
-        message_fields = {}
-        required_fields_left: Set[str] = cls._required_fields.copy()
-
-        while position < len(data):
-            number, wire_type, position = decode_header(data, position)
-
-            if number in cls._field_by_number:
-                field = cls._field_by_number[number]
-
-                if field.wire_type != wire_type:
-                    raise MessageDecodeError(
-                        f"Field {field.name} has wire_type={field.wire_type}, "
-                        f"read wire_type={wire_type} instead"
-                    )
-
-                if isinstance(field, Repeated) and not field.packed:
-                    item, position = field.decode(data, position)
-                    message_fields.setdefault(field.name, []).append(item)
-                elif isinstance(field, MapField):
-                    key, value, position = field.decode(data, position)
-                    message_fields.setdefault(field.name, {})[key] = value
-                else:
-                    item, position = field.decode(data, position)
-                    message_fields[field.name] = item
-
-                required_fields_left.discard(field.name)
-            else:
-                # skip unknown fields
-                _, position = wire_type_to_decoder[wire_type](data, position)
-
-        if required_fields_left:
-            raise MessageDecodeError(
-                f"Missing required fields {required_fields_left}"
+    def from_bytes(cls: Type[T], data: bytes, strict: bool = True) -> T:
+        return cls(
+            **message_fields_from_bytes(
+                data,
+                cls._required_fields,
+                cls._field_by_number,
+                strict,
             )
-
-        return cls(**message_fields)
+        )
 
     @classmethod
     def from_stream(cls: Type[T], stream: BinaryIO) -> T:

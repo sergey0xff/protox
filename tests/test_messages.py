@@ -221,13 +221,13 @@ def test_repeated_enum(packed):
         Y = 2
         Z = 3
 
-    class PackedRepeatedEnum(Message):
+    class RepeatedEnumMessage(Message):
         options = Repeated(Option, number=1, packed=packed)
 
     options = [Option.X, Option.Y, Option.Z]
 
-    encoded = PackedRepeatedEnum(options=options).to_bytes()
-    decoded = PackedRepeatedEnum.from_bytes(encoded)
+    encoded = RepeatedEnumMessage(options=options).to_bytes()
+    decoded = RepeatedEnumMessage.from_bytes(encoded)
 
     assert decoded.options == options
 
@@ -472,3 +472,12 @@ def test_message_read_equals():
     b = SimpleMessage.from_bytes(a.to_bytes())
 
     assert a == b
+
+
+def test_message_read_non_strict():
+    class SimpleMessage(Message):
+        x: int = Int32(number=1, required=True)
+
+    message = SimpleMessage.from_bytes(b'', strict=False)
+    assert not message.is_initialized()
+    assert message.x is None

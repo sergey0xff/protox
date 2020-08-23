@@ -80,7 +80,7 @@ class Struct(Message, UserDict):
         return Struct(**value)
 
     @classmethod
-    def from_bytes(cls, buffer: bytes) -> 'Struct':
+    def from_bytes(cls, buffer: bytes, strict: bool = True) -> 'Struct':
         rv = cls()
         map_field = cls._field_by_number[1]
         position = 0

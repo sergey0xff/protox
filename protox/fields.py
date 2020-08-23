@@ -97,9 +97,11 @@ class Field(ABC):
         data: bytes,
         position: int,
         message_dict: dict
-    ):
+    ) -> int:
         item, position = self.decode(data, position)
         message_dict[self.name] = item
+
+        return position
 
     def encode_value(self, value) -> bytes:
         raise NotImplementedError()
@@ -153,7 +155,8 @@ class PrimitiveField(Field, ABC):
 
 
 class BaseRepeatedStrategy(ABC):
-    def __init__(self, field: Field, number: int):
+    def __init__(self, repeated_field: 'Repeated', field: Field, number: int):
+        self.repeated_field = repeated_field
         self.field = field
         self.number = number
         self.header = encode_varint(self.field.number << 3 | WireType.LENGTH)
@@ -169,6 +172,17 @@ class BaseRepeatedStrategy(ABC):
 
 class PackedRepeatedStrategy(BaseRepeatedStrategy):
     wire_type = WireType.LENGTH
+
+    def read_to_dict(
+        self,
+        data: bytes,
+        position: int,
+        message_dict: dict
+    ) -> int:
+        item, position = self.decode(data, position)
+        message_dict[self.repeated_field.name] = item
+
+        return position
 
     def encode(self, values: list) -> bytes:
         if not values:
@@ -204,6 +218,17 @@ class PackedRepeatedStrategy(BaseRepeatedStrategy):
 
 
 class UnpackedRepeatedStrategy(BaseRepeatedStrategy):
+    def read_to_dict(
+        self,
+        data: bytes,
+        position: int,
+        message_dict: dict
+    ) -> int:
+        item, position = self.decode(data, position)
+        message_dict.setdefault(self.repeated_field.name, []).append(item)
+
+        return position
+
     @property
     def wire_type(self):
         return self.field.wire_type
@@ -256,17 +281,14 @@ class Repeated(Field):
         self.strategy: BaseRepeatedStrategy
 
         if packed:
-            self.strategy = PackedRepeatedStrategy(self.field, number)
+            self.strategy = PackedRepeatedStrategy(self, self.field, number)
         else:
-            self.strategy = UnpackedRepeatedStrategy(self.field, number)
+            self.strategy = UnpackedRepeatedStrategy(self, self.field, number)
 
+        self.read_to_dict = self.strategy.read_to_dict
         self.wire_type = self.strategy.wire_type
 
         super().__init__(number=number)
-
-    def read_to_dict(self, data: bytes, position: int, message_dict: dict):
-        item, position = self.decode(data, position)
-        message_dict.setdefault(self.name, []).append(item)
 
     def encode(self, values: list) -> bytes:
         return self.strategy.encode(values)
@@ -581,9 +603,16 @@ class MapField(Field):
         self.key_field = key_field
         self.value_field = value_field
 
-    def read_to_dict(self, data: bytes, position: int, message_dict: dict):
+    def read_to_dict(
+        self,
+        data: bytes,
+        position: int,
+        message_dict: dict
+    ) -> int:
         key, value, position = self.decode(data, position)
         message_dict.setdefault(self.name, {})[key] = value
+
+        return position
 
     def encode_value(self, value: Dict) -> bytes:
         buffer = bytearray()
