@@ -92,6 +92,15 @@ class Field(ABC):
         # name is set when adding the field to the message
         self.name: Optional[str] = None
 
+    def read_to_dict(
+        self,
+        data: bytes,
+        position: int,
+        message_dict: dict
+    ):
+        item, position = self.decode(data, position)
+        message_dict[self.name] = item
+
     def encode_value(self, value) -> bytes:
         raise NotImplementedError()
 
@@ -254,6 +263,10 @@ class Repeated(Field):
         self.wire_type = self.strategy.wire_type
 
         super().__init__(number=number)
+
+    def read_to_dict(self, data: bytes, position: int, message_dict: dict):
+        item, position = self.decode(data, position)
+        message_dict.setdefault(self.name, []).append(item)
 
     def encode(self, values: list) -> bytes:
         return self.strategy.encode(values)
@@ -567,6 +580,10 @@ class MapField(Field):
         self.dict_entry = _DictEntry
         self.key_field = key_field
         self.value_field = value_field
+
+    def read_to_dict(self, data: bytes, position: int, message_dict: dict):
+        key, value, position = self.decode(data, position)
+        message_dict.setdefault(self.name, {})[key] = value
 
     def encode_value(self, value: Dict) -> bytes:
         buffer = bytearray()
