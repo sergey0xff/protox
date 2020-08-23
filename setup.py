@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='protox',
-    version='0.5.0',
+    version='0.5.0b1',
     description='Protobuf for humans',
     long_description=open('README.md', 'r').read(),
     long_description_content_type='text/markdown',
@@ -26,7 +26,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'protox_encoding>=0.0.6',
+        'protox_encoding>=0.0.7',
     ],
     python_requires=">=3.6",
 )
