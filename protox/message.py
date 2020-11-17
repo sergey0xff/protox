@@ -338,6 +338,8 @@ class Message(metaclass=MessageMeta):
                 elif isinstance(field, MapField):
                     key, value = field.decode(stream)
                     message_fields.setdefault(field.name, {})[key] = value
+                elif isinstance(field, MessageField):
+                    message_fields[field.name] = field.decode(stream, strict=strict)
                 else:
                     message_fields[field.name] = field.decode(stream)
             else:
