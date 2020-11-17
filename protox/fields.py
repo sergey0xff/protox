@@ -683,10 +683,10 @@ class MessageField(Field):
         encoded_message = value.to_bytes()
         return encode_bytes(encoded_message)
 
-    def decode(self, stream: IO):
+    def decode(self, stream: IO, *, strict=True):
         length = decode_varint(stream)
         message_stream = io.BytesIO(stream.read(length))
-        return self.of_type.from_stream(message_stream)
+        return self.of_type.from_stream(message_stream, strict=strict)
 
     def validate_value(self, value):
         if not isinstance(value, self.of_type):

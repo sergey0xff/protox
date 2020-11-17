@@ -5,7 +5,7 @@ from typing import List
 import pytest
 
 from protox import Empty
-from protox.exceptions import FieldValidationError
+from protox.exceptions import FieldValidationError, MessageDecodeError
 from protox.fields import Int32, String, MessageField, one_of, EnumField, Repeated
 from protox.message import Message
 
@@ -480,3 +480,45 @@ def test_message_read_non_strict():
     message = SimpleMessage.from_bytes(b'', strict=False)
     assert not message.is_initialized()
     assert message.x is None
+
+
+def test_missing_nested_message_field_strict():
+    class User(Message):
+        name: str = String(number=1, required=False)
+
+    class SimpleMessage(Message):
+        user: User = MessageField(User, number=1, required=True)
+
+    message = SimpleMessage(user=User())
+    encoded_message = message.to_bytes()
+
+    class User(Message):
+        name: str = String(number=1, required=True)
+
+    class SimpleMessage(Message):
+        user: User = MessageField(User, number=1, required=True)
+
+    stream = io.BytesIO(encoded_message)
+    with pytest.raises(MessageDecodeError):
+        SimpleMessage.from_stream(stream, strict=True)
+
+
+def test_missing_nested_message_field_not_strict():
+    class User(Message):
+        name: str = String(number=1, required=False)
+
+    class SimpleMessage(Message):
+        user: User = MessageField(User, number=1, required=True)
+
+    message = SimpleMessage(user=User())
+    encoded_message = message.to_bytes()
+
+    class User(Message):
+        name: str = String(number=1, required=True)
+
+    class SimpleMessage(Message):
+        user: User = MessageField(User, number=1, required=True)
+
+    stream = io.BytesIO(encoded_message)
+    decoded_message = SimpleMessage.from_stream(stream, strict=False)
+    assert decoded_message.user.name is None
