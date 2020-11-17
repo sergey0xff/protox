@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+enum Shape {
+    ROUND = 1;
+    SQUARE = 2;
+    TRIANGLE = 3;
+}

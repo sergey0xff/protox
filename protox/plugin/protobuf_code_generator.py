@@ -319,8 +319,7 @@ class ProtobufCodeGenerator:
         if self._uses_enums or self._uses_typing:
             nl()
 
-        if self.has_messages():
-            w('import protox\n')
+        w('import protox\n')
 
         for file in self._import_requests.values():
             if self._index.base_package:
