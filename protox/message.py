@@ -463,7 +463,7 @@ class Message(metaclass=MessageMeta):
 
         return not self == other
 
-    def __str__(self):
+    def __repr__(self):
         return self._format()
 
     _format_indent = ' ' * 4
